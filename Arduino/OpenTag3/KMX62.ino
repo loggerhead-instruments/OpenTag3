@@ -94,7 +94,7 @@ int kmx62Init(int fifoMode){
   writeI2C(kmx62Address, KMX_MMI_CNTL2, 0xFF); // magnetometer motion counter 255
   writeI2C(kmx62Address, KMX_MMI_CNTL3, 0xC7); // magentometer motion interrupt enabled, unlatched, ODR at 100 Hz
 
-  lf(fifoMode) { 
+  if(fifoMode) { 
     writeI2C(kmx62Address, KMX_BUF_CTRL_1, 0xC0); // watermark at 192 samples
     writeI2C(kmx62Address, KMX_BUF_CTRL_2, 0x00); // FIFO mode
     writeI2C(kmx62Address, KMX_BUF_CTRL_3, 0xFE); // buffer full interrupt enabled, accel and mag buffered, temp not buffered
@@ -106,7 +106,43 @@ int kmx62Init(int fifoMode){
 void kmx62SampleRate(int srate){
     writeI2C(kmx62Address, KMX_CNTL2, 0x00); // standby mode
     delay(1);
-    writeI2C(kmx62Address, KMX_ODCNTL, (KMX_100HZ<<8) & KMX_100HZ); //Mag and Accel update rate
+
+#define KMX_25HZ (0x01)
+#define KMX_50HZ (0x02)
+#define KMX_100HZ (0x03)
+#define KMX_200HZ (0x04)
+#define KMX_400HZ (0x05)
+#define KMX_800HZ (0x06)
+#define KMX_1600HZ (0x07)4
+#define KMX_25KHZ (0xFF)
+    
+    switch(srate){
+      case 25: 
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_25HZ<<8) & KMX_25HZ); //Mag and Accel update rate
+        break;
+      case 50: 
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_50HZ<<8) & KMX_50HZ); //Mag and Accel update rate
+        break;
+      case 100: 
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_100HZ<<8) & KMX_100HZ); //Mag and Accel update rate
+        break;
+      case 200: 
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_200HZ<<8) & KMX_200HZ); //Mag and Accel update rate
+        break;
+      case 400: 
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_400HZ<<8) & KMX_400HZ); //Mag and Accel update rate
+        break;
+      case 800: 
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_800HZ<<8) & KMX_800HZ); //Mag and Accel update rate
+        break;
+      case 1600: 
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_1600HZ<<8) & KMX_1600HZ); //Mag and Accel update rate
+        break;
+      case 25000: 
+        writeI2C(kmx62Address, KMX_ODCNTL, KMX_25KHZ); // Accelerometer ONLY
+        break;
+    }
+    
 }
 
 void kmx62ClearFifo(){

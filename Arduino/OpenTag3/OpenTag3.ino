@@ -88,8 +88,9 @@ void loop() {
 
 
 void initSensors(){
-  kmx62Init();
+  kmx62Init(1); // init with FIFO mode
   kmx62SampleRate(100);
+  kmx62ClearFifo();
   kmx62Start();
   Serial.println(kmx62TestResponse());
 
