@@ -1,3 +1,4 @@
 **/*.zip
 Altium/*.LOG
 Altium/__Previews/*.*
+*.PcbDocPreview
