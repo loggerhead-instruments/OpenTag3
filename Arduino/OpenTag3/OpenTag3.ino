@@ -89,10 +89,12 @@ void loop() {
 
 void initSensors(){
   kmx62Init();
+  kmx62SampleRate(100);
+  kmx62Start();
   Serial.println(kmx62TestResponse());
 
   for(int x=0; x<100l; x++){
-    readKMX62();
+    kmx62Read();
     Serial.print("Accel/Mag ");
     Serial.print(accelX); Serial.print(" ");
     Serial.print(accelY); Serial.print(" ");

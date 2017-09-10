@@ -1,6 +1,6 @@
 // from https://github.com/ROHMUSDC/ROHM_SensorPlatform_Multi-Sensor-Shield/blob/master/Platform%20Code/Arduino_UNO_FirmwareExample/ROHM_SENSORSHLD1-EVK-101_10-20-2016/ROHM_SENSORSHLD1-EVK-101_TerminalDemo_11-10-2016/ROHM_SENSORSHLD1-EVK-101_TerminalDemo_11-10-2016.ino
 
-int KMX62_DeviceAddress = 0x0E; 
+int kmx62Address = 0x0E; 
 #define KMX_WHO_AM_I (0x00)
 #define KMX_INS1 (0x01)
 #define KMX_INS2 (0x02)
@@ -27,14 +27,23 @@ int KMX62_DeviceAddress = 0x0E;
 #define KMX_CNTL1 (0x39)
 #define KMX_CNTL2 (0x3A)
 #define KMX_COTR (0x3C)
-#define BUF_CTRL_1 (0x77)
-#define BUF_CTRL_2 (0x78)
-#define BUF_CTRL_3 (0x79)
-#define BUF_CLEAR (0x7A)
-#define BUF_STATUS_1 (0x7B)
-#define BUF_STATUS_2 (0x7C)
-#define BUF_STATUS_3 (0x7D)
-#define BUF_READ (0x7E)
+#define KMX_BUF_CTRL_1 (0x77)
+#define KMX_BUF_CTRL_2 (0x78)
+#define KMX_BUF_CTRL_3 (0x79)
+#define KMX_BUF_CLEAR (0x7A)
+#define KMX_BUF_STATUS_1 (0x7B)
+#define KMX_BUF_STATUS_2 (0x7C)
+#define KMX_BUF_STATUS_3 (0x7D)
+#define KMX_BUF_READ (0x7E)
+
+#define KMX_25HZ (0x01)
+#define KMX_50HZ (0x02)
+#define KMX_100HZ (0x03)
+#define KMX_200HZ (0x04)
+#define KMX_400HZ (0x05)
+#define KMX_800HZ (0x06)
+#define KMX_1600HZ (0x07)4
+#define KMX_25KHZ (0xFF)
 
 //Accel Portion
 int MEMS_Accel_Xout_highByte = 0;
@@ -75,23 +84,49 @@ void writeI2C(int devAddress, int registerAddress, int value){
   Wire.endTransmission();
 }
 
-int kmx62Init(){
+int kmx62Init(int fifoMode){
 
-  
+  writeI2C(kmx62Address, KMX_INC1, 0x20); // FIFO watermark reported on GPIO1
+  writeI2C(kmx62Address, KMX_INC2, 0x01); // Magnetometer motion interrupt reported on GPIO2
+  writeI2C(kmx62Address, KMX_INC3, 0x45); // push-pull, active high, GPIO1 pulsed, GPIO2 latched
+  writeI2C(kmx62Address, KMX_INC5, 0x03); // magnetometer Z axis for motion interrupt
+  writeI2C(kmx62Address, KMX_MMI_CNTL1, 0xFF); // magnetometer interrupt threshold is max value
+  writeI2C(kmx62Address, KMX_MMI_CNTL2, 0xFF); // magnetometer motion counter 255
+  writeI2C(kmx62Address, KMX_MMI_CNTL3, 0xC7); // magentometer motion interrupt enabled, unlatched, ODR at 100 Hz
 
-  // enable accelerometer and magnetometer
-  writeI2C(KMX62_DeviceAddress, KMX_CNTL2, 0x5F);
-  delay(2);
+  lf(fifoMode) { 
+    writeI2C(kmx62Address, KMX_BUF_CTRL_1, 0xC0); // watermark at 192 samples
+    writeI2C(kmx62Address, KMX_BUF_CTRL_2, 0x00); // FIFO mode
+    writeI2C(kmx62Address, KMX_BUF_CTRL_3, 0xFE); // buffer full interrupt enabled, accel and mag buffered, temp not buffered
+  }
 
   return 1;
 }
 
+void kmx62SampleRate(int srate){
+    writeI2C(kmx62Address, KMX_CNTL2, 0x00); // standby mode
+    delay(1);
+    writeI2C(kmx62Address, KMX_ODCNTL, (KMX_100HZ<<8) & KMX_100HZ); //Mag and Accel update rate
+}
+
+void kmx62ClearFifo(){
+  writeI2C(kmx62Address, KMX_BUF_CLEAR, 0x01);
+}
+
+void kmx62Start(){
+  // temperature standby
+  // +/- 16g accelerometer range
+  // mag and accel maximum oversample
+  // enable accelerometer and magnetometer
+  writeI2C(kmx62Address, KMX_CNTL2, 0x5F); 
+}
+
 int kmx62TestResponse(){  // should return 0x55
-  Wire.beginTransmission(KMX62_DeviceAddress);
+  Wire.beginTransmission(kmx62Address);
   Wire.write(KMX_COTR);
   Wire.endTransmission();
   
-  Wire.requestFrom(KMX62_DeviceAddress, 1);
+  Wire.requestFrom(kmx62Address, 1);
   return(Wire.read());
   Wire.endTransmission();
 }
@@ -122,14 +157,13 @@ int kmx62TestResponse(){  // should return 0x55
   // 7. Yout = ([3]<<6) | ([2]>>2)
   // 8. Zout = ([5]<<6) | ([4]>>2)
 
-  void readKMX62(){
+  void kmx62Read(){
   // Start Getting Data from Accel
-  Wire.beginTransmission(KMX62_DeviceAddress);
+  Wire.beginTransmission(kmx62Address);
   Wire.write(0x0A);
   Wire.endTransmission(0);
   
-  Wire.requestFrom(KMX62_DeviceAddress, 6, 0);
-  //Serial.println(Wire.available());
+  Wire.requestFrom(kmx62Address, 6, 0);
   MEMS_Accel_Xout_lowByte = Wire.read();
   MEMS_Accel_Xout_highByte = Wire.read();
   MEMS_Accel_Yout_lowByte = Wire.read();
@@ -142,10 +176,10 @@ int kmx62TestResponse(){  // should return 0x55
   accelY = (MEMS_Accel_Yout_highByte<<8) | (MEMS_Accel_Yout_lowByte);
   accelZ = (MEMS_Accel_Zout_highByte<<8) | (MEMS_Accel_Zout_lowByte);
   
-  Wire.beginTransmission(KMX62_DeviceAddress);
+  Wire.beginTransmission(kmx62Address);
   Wire.write(0x10);
   Wire.endTransmission(0);
-  Wire.requestFrom(KMX62_DeviceAddress, 6, 0);
+  Wire.requestFrom(kmx62Address, 6, 0);
   MEMS_Mag_Xout_lowByte = Wire.read();
   MEMS_Mag_Xout_highByte = Wire.read();
   MEMS_Mag_Yout_lowByte = Wire.read();
