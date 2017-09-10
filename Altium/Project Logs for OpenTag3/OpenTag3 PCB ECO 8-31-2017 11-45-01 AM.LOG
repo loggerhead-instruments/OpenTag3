@@ -1,0 +1,6 @@
+Removed Pin From Net: NetName=POW Pin=P9-1
+Removed Pin From Net: NetName=GND Pin=P9-2
+Removed Member From Class: ClassName=OpenTag3 Member=P9
+Change Component DesignItemId : Designator=P8 Old DesignItemId=HDR_2x1_2mm New DesignItemId=Header 2
+Change Component Footprint: Designator=P8 Old Footprint=HDR_2x1_2mm New Footprint=HDR1X2
+Change Component Comment : Designator=P8 Old Comment=Battery New Comment=Header 2
