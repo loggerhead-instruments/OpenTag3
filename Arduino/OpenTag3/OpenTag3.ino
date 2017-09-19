@@ -14,7 +14,7 @@
 #define SDA_PIN 4
 #define SCL_PORT PORTC
 #define SCL_PIN 5
-#define I2C_TIMEOUT 1000
+#define I2C_TIMEOUT 100
 #define I2C_FASTMODE 1
 
 #include <SoftI2CMaster.h>
@@ -48,6 +48,8 @@ int accelX, accelY, accelZ;
 int magX, magY, magZ;
 #define BUF_BYTES 96
 uint8_t fifoVal[BUF_BYTES];
+
+long startTime;
 
 void setup() {
   Serial.begin(115200);
@@ -90,28 +92,29 @@ void setup() {
 
   fileInit();
   initSensors();
+  startTime = millis();
 
 }
 
-long startTime;
+
 
 void loop() {
   int fifoPts = kmx62GetFifoPoints();
   if(fifoPts>BUF_BYTES * 2){
-    Serial.print(millis());
-    Serial.print(" ");
-    Serial.print(millis() - startTime);
-    Serial.print(" ");
-    Serial.print(fifoPts);
-    Serial.print(" ");
+//    Serial.print(millis());
+//    Serial.print(" ");
+//    Serial.print(millis() - startTime);
+//    Serial.print(" ");
+//    Serial.print(fifoPts);
+//    Serial.print(" ");
     kmx62FifoRead();
     dataFile.write(fifoVal, BUF_BYTES);
     kmx62FifoRead();
     dataFile.write(fifoVal, BUF_BYTES);
-    Serial.println(fifoVal[1]<<8 | fifoVal[0]);
-    startTime = millis();
+//    Serial.println(fifoVal[1]<<8 | fifoVal[0]);
+//    startTime = millis();
   }
-  if(millis()>30000){
+  if(millis() - startTime>10000){
     dataFile.close();
     Serial.println("Test done");
     digitalWrite(LED_RED, HIGH);
@@ -122,11 +125,16 @@ void loop() {
 void initSensors(){
   int testResponse = kmx62TestResponse();
   while(testResponse!=85){
-    Serial.println("KMX not recognized");
+    Serial.print("KMX not recognized: ");
+    Serial.println(testResponse);
     delay(500);
+    digitalWrite(LED_RED, HIGH);
+    kmx62Reset();
+    testResponse = kmx62TestResponse();
   }
+  digitalWrite(LED_RED, LOW);
   kmx62Init(1); // init with FIFO mode
-  kmx62SampleRate(100);
+  kmx62SampleRate(1600);
   
   kmx62Start(0x5F);
   kmx62ClearFifo();

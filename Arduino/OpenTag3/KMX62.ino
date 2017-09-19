@@ -84,7 +84,12 @@ void writeI2C(int devAddress, int registerAddress, int value){
   i2c_stop();
   __asm__ __volatile__ ("nop\n\t"); // very short delay
 }
- 
+
+void kmx62Reset(){
+  writeI2C(kmx62Address, KMX_CNTL1, 0x80);
+  delay(5);
+}
+
 int kmx62Init(int fifoMode){
   writeI2C(kmx62Address, KMX_INC1, 0x20); // FIFO watermark reported on GPIO1
   writeI2C(kmx62Address, KMX_INC2, 0x01); // Magnetometer motion interrupt reported on GPIO2
@@ -161,9 +166,8 @@ int kmx62TestResponse(){  // should return 0x55 (decimal 85)
   byte response;
   i2c_start(kmx62Address);
   i2c_write(KMX_COTR);
-  i2c_stop();
   
-  i2c_start(kmx62Address | 1); // or'd with 1 for read bit
+  i2c_rep_start(kmx62Address | 1); // or'd with 1 for read bit
   response = i2c_read(true);
   i2c_stop();
   return response;
