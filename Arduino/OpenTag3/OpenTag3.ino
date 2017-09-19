@@ -14,12 +14,14 @@
 #define SDA_PIN 4
 #define SCL_PORT PORTC
 #define SCL_PIN 5
-#define I2C_TIMEOUT 100
-//#define I2C_FASTMODE 1
+#define I2C_TIMEOUT 1000
+#define I2C_FASTMODE 1
 
-#include <SoftWire.h>
+
+#include <SoftI2CMaster.h>
 #include <avr/io.h>
-SoftWire Wire = SoftWire();
+//#include <SoftWire.h> // Wire wrapper for SoftI2C
+//SoftWire Wire = SoftWire();
 
 //
 // DEV SETTINGS
@@ -46,10 +48,13 @@ File dataFile;
 // sensor values
 int accelX, accelY, accelZ;
 int magX, magY, magZ;
+byte fifoVal[24];
 
 void setup() {
   Serial.begin(115200);
-  
+  Serial.println("On");
+  delay(1000);
+
   pinMode(LED_GRN, OUTPUT);
   pinMode(LED_RED, OUTPUT);
   pinMode(BURN, OUTPUT);
@@ -62,39 +67,52 @@ void setup() {
   digitalWrite(BURN, LOW);
   pinMode(SD_POW, OUTPUT);      
   digitalWrite(SD_POW, HIGH); 
-  delay(2000);
-  Serial.println("On");
-
-  Wire.begin();
-
-  Serial.println("Init microSD");
-  // see if the card is present and can be initialized:
-  while (!sd.begin(chipSelect, SPI_FULL_SPEED)) {
-    Serial.println("Card failed");
-    digitalWrite(LED_RED, HIGH);
-    delay(200);
-    digitalWrite(LED_RED, LOW);
-    delay(100);
+  
+  byte I2C_check = i2c_init();
+  if(I2C_check == false){
+    Serial.println("I2C Init Failed--SDA or SCL may not be pulled up!");
+     while(1){
+       digitalWrite(LED_RED, HIGH);
+       delay(500);
+       digitalWrite(LED_RED, LOW);
+       delay(500);
+     }
   }
+  
+
+
+//  Serial.println("Init microSD");
+//  // see if the card is present and can be initialized:
+//  while (!sd.begin(chipSelect, SPI_FULL_SPEED)) {
+//    Serial.println("Card failed");
+//    digitalWrite(LED_RED, HIGH);
+//    delay(200);
+//    digitalWrite(LED_RED, LOW);
+//    delay(100);
+//  }
 
   initSensors();
 
 }
 
 void loop() {
-  delay(1000);
-
+    if(kmx62GetFifoPoints()>16){
+      Serial.print(kmx62GetFifoPoints());
+      Serial.print(" ");
+      kmx62FifoRead();
+      Serial.println(fifoVal[1]<<8 | fifoVal[0]);
+    }
 }
 
-
 void initSensors(){
-  kmx62Init(1); // init with FIFO mode
-  kmx62SampleRate(100);
-  kmx62ClearFifo();
-  kmx62Start();
   Serial.println(kmx62TestResponse());
-
-  for(int x=0; x<100l; x++){
+  kmx62Init(1); // init with FIFO mode
+  kmx62SampleRate(25);
+  
+  kmx62Start(0x5F);
+  kmx62ClearFifo();
+  
+  for(int x=0; x<100; x++){
     kmx62Read();
     Serial.print("Accel/Mag ");
     Serial.print(accelX); Serial.print(" ");
@@ -103,8 +121,12 @@ void initSensors(){
     Serial.print(magX); Serial.print(" ");
     Serial.print(magY); Serial.print(" ");
     Serial.println(magZ);
-    delay(1000);
+    Serial.print("Fifo:");
+    Serial.println(kmx62GetFifoPoints());
+    delay(20);
   }
+
+  kmx62ClearFifo();
 }
 
 

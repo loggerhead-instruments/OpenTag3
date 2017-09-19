@@ -1,6 +1,6 @@
 // from https://github.com/ROHMUSDC/ROHM_SensorPlatform_Multi-Sensor-Shield/blob/master/Platform%20Code/Arduino_UNO_FirmwareExample/ROHM_SENSORSHLD1-EVK-101_10-20-2016/ROHM_SENSORSHLD1-EVK-101_TerminalDemo_11-10-2016/ROHM_SENSORSHLD1-EVK-101_TerminalDemo_11-10-2016.ino
 
-int kmx62Address = 0x0E; 
+int kmx62Address = 0x1C; //this is 8 bit address, 7-bit address = 0x0E
 #define KMX_WHO_AM_I (0x00)
 #define KMX_INS1 (0x01)
 #define KMX_INS2 (0x02)
@@ -42,7 +42,7 @@ int kmx62Address = 0x0E;
 #define KMX_200HZ (0x04)
 #define KMX_400HZ (0x05)
 #define KMX_800HZ (0x06)
-#define KMX_1600HZ (0x07)4
+#define KMX_1600HZ (0x07)
 #define KMX_25KHZ (0xFF)
 
 //Accel Portion
@@ -78,14 +78,14 @@ int MEMS_Mag_Zout_lowByte = 0;
   // 1. CNTL2 (0x3A), write (0x5F): 4g, Max RES, EN temp mag and accel
 
 void writeI2C(int devAddress, int registerAddress, int value){
-  Wire.beginTransmission(devAddress);
-  Wire.write(registerAddress);
-  Wire.write(value);
-  Wire.endTransmission();
+  i2c_start(devAddress); //This needs the 8 bit address (7bit Device Address + RW bit... Read = 1, Write = 0)
+  i2c_write(registerAddress);
+  i2c_write(value);
+  i2c_stop();
+  delay(1);
 }
-
+ 
 int kmx62Init(int fifoMode){
-
   writeI2C(kmx62Address, KMX_INC1, 0x20); // FIFO watermark reported on GPIO1
   writeI2C(kmx62Address, KMX_INC2, 0x01); // Magnetometer motion interrupt reported on GPIO2
   writeI2C(kmx62Address, KMX_INC3, 0x45); // push-pull, active high, GPIO1 pulsed, GPIO2 latched
@@ -99,44 +99,33 @@ int kmx62Init(int fifoMode){
     writeI2C(kmx62Address, KMX_BUF_CTRL_2, 0x00); // FIFO mode
     writeI2C(kmx62Address, KMX_BUF_CTRL_3, 0xFE); // buffer full interrupt enabled, accel and mag buffered, temp not buffered
   }
-
   return 1;
 }
 
 void kmx62SampleRate(int srate){
     writeI2C(kmx62Address, KMX_CNTL2, 0x00); // standby mode
     delay(1);
-
-#define KMX_25HZ (0x01)
-#define KMX_50HZ (0x02)
-#define KMX_100HZ (0x03)
-#define KMX_200HZ (0x04)
-#define KMX_400HZ (0x05)
-#define KMX_800HZ (0x06)
-#define KMX_1600HZ (0x07)4
-#define KMX_25KHZ (0xFF)
-    
     switch(srate){
       case 25: 
-        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_25HZ<<8) & KMX_25HZ); //Mag and Accel update rate
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_25HZ<<8) | KMX_25HZ); //Mag and Accel update rate
         break;
       case 50: 
-        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_50HZ<<8) & KMX_50HZ); //Mag and Accel update rate
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_50HZ<<8) | KMX_50HZ); //Mag and Accel update rate
         break;
       case 100: 
-        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_100HZ<<8) & KMX_100HZ); //Mag and Accel update rate
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_100HZ<<8) | KMX_100HZ); //Mag and Accel update rate
         break;
       case 200: 
-        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_200HZ<<8) & KMX_200HZ); //Mag and Accel update rate
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_200HZ<<8) | KMX_200HZ); //Mag and Accel update rate
         break;
       case 400: 
-        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_400HZ<<8) & KMX_400HZ); //Mag and Accel update rate
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_400HZ<<8) | KMX_400HZ); //Mag and Accel update rate
         break;
       case 800: 
-        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_800HZ<<8) & KMX_800HZ); //Mag and Accel update rate
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_800HZ<<8) | KMX_800HZ); //Mag and Accel update rate
         break;
       case 1600: 
-        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_1600HZ<<8) & KMX_1600HZ); //Mag and Accel update rate
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_1600HZ<<8) | KMX_1600HZ); //Mag and Accel update rate
         break;
       case 25000: 
         writeI2C(kmx62Address, KMX_ODCNTL, KMX_25KHZ); // Accelerometer ONLY
@@ -149,22 +138,35 @@ void kmx62ClearFifo(){
   writeI2C(kmx62Address, KMX_BUF_CLEAR, 0x01);
 }
 
-void kmx62Start(){
+int kmx62GetFifoPoints(){
+  byte nFifoPts_low, nFifoPts_high;
+  i2c_start(kmx62Address);
+  i2c_write(KMX_BUF_STATUS_1);
+  i2c_rep_start(kmx62Address | 1); // or'd with 1 for read bit
+  nFifoPts_low = i2c_read(false);
+  nFifoPts_high = i2c_read(true) & 0x01; //only need bit 0
+  i2c_stop();
+  return (nFifoPts_high<<8 | nFifoPts_low);
+}
+void kmx62Start(unsigned int setting){
+  // 0x5F
   // temperature standby
   // +/- 16g accelerometer range
   // mag and accel maximum oversample
   // enable accelerometer and magnetometer
-  writeI2C(kmx62Address, KMX_CNTL2, 0x5F); 
+  writeI2C(kmx62Address, KMX_CNTL2, setting); 
 }
 
-int kmx62TestResponse(){  // should return 0x55
-  Wire.beginTransmission(kmx62Address);
-  Wire.write(KMX_COTR);
-  Wire.endTransmission();
+int kmx62TestResponse(){  // should return 0x55 (decimal 85)
+  byte response;
+  i2c_start(kmx62Address);
+  i2c_write(KMX_COTR);
+  i2c_stop();
   
-  Wire.requestFrom(kmx62Address, 1);
-  return(Wire.read());
-  Wire.endTransmission();
+  i2c_start(kmx62Address | 1); // or'd with 1 for read bit
+  response = i2c_read(true);
+  i2c_stop();
+  return response;
 }
 
  //---------- Start Code for Reading KMX62 Kionix Accelerometer+Mag Sensor ----------  
@@ -194,37 +196,47 @@ int kmx62TestResponse(){  // should return 0x55
   // 8. Zout = ([5]<<6) | ([4]>>2)
 
   void kmx62Read(){
-  // Start Getting Data from Accel
-  Wire.beginTransmission(kmx62Address);
-  Wire.write(0x0A);
-  Wire.endTransmission(0);
-  
-  Wire.requestFrom(kmx62Address, 6, 0);
-  MEMS_Accel_Xout_lowByte = Wire.read();
-  MEMS_Accel_Xout_highByte = Wire.read();
-  MEMS_Accel_Yout_lowByte = Wire.read();
-  MEMS_Accel_Yout_highByte = Wire.read();
-  MEMS_Accel_Zout_lowByte = Wire.read();
-  MEMS_Accel_Zout_highByte = Wire.read();
-  Wire.endTransmission();
-  
-  accelX = (MEMS_Accel_Xout_highByte<<8) | (MEMS_Accel_Xout_lowByte);
-  accelY = (MEMS_Accel_Yout_highByte<<8) | (MEMS_Accel_Yout_lowByte);
-  accelZ = (MEMS_Accel_Zout_highByte<<8) | (MEMS_Accel_Zout_lowByte);
-  
-  Wire.beginTransmission(kmx62Address);
-  Wire.write(0x10);
-  Wire.endTransmission(0);
-  Wire.requestFrom(kmx62Address, 6, 0);
-  MEMS_Mag_Xout_lowByte = Wire.read();
-  MEMS_Mag_Xout_highByte = Wire.read();
-  MEMS_Mag_Yout_lowByte = Wire.read();
-  MEMS_Mag_Yout_highByte = Wire.read();
-  MEMS_Mag_Zout_lowByte = Wire.read();
-  MEMS_Mag_Zout_highByte = Wire.read();
-  Wire.endTransmission();
-  
-  magX = (MEMS_Mag_Xout_highByte<<8) | (MEMS_Mag_Xout_lowByte);
-  magY = (MEMS_Mag_Yout_highByte<<8) | (MEMS_Mag_Yout_lowByte);
-  magZ = (MEMS_Mag_Zout_highByte<<8) | (MEMS_Mag_Zout_lowByte);
+    // Start Getting Data from Accel
+    i2c_start(kmx62Address);
+    i2c_write(0x0A);
+    i2c_rep_start(kmx62Address | 1);  // Or-ed with "1" for read bit
+    MEMS_Accel_Xout_lowByte = i2c_read(false);
+    MEMS_Accel_Xout_highByte = i2c_read(false);
+    MEMS_Accel_Yout_lowByte = i2c_read(false);
+    MEMS_Accel_Yout_highByte = i2c_read(false);
+    MEMS_Accel_Zout_lowByte = i2c_read(false);
+    MEMS_Accel_Zout_highByte = i2c_read(true);
+    i2c_stop();
+    
+    accelX = (MEMS_Accel_Xout_highByte<<8) | (MEMS_Accel_Xout_lowByte);
+    accelY = (MEMS_Accel_Yout_highByte<<8) | (MEMS_Accel_Yout_lowByte);
+    accelZ = (MEMS_Accel_Zout_highByte<<8) | (MEMS_Accel_Zout_lowByte);
+    
+    // Start Getting Data from Mag Sensor
+    i2c_start(kmx62Address);
+    i2c_write(0x10);
+    i2c_rep_start(kmx62Address | 1);  // Or-ed with "1" for read bit
+    MEMS_Mag_Xout_lowByte = i2c_read(false);
+    MEMS_Mag_Xout_highByte = i2c_read(false);
+    MEMS_Mag_Yout_lowByte = i2c_read(false);
+    MEMS_Mag_Yout_highByte = i2c_read(false);
+    MEMS_Mag_Zout_lowByte = i2c_read(false);
+    MEMS_Mag_Zout_highByte = i2c_read(true);
+    i2c_stop();
+    
+    magX = (MEMS_Mag_Xout_highByte<<8) | (MEMS_Mag_Xout_lowByte);
+    magY = (MEMS_Mag_Yout_highByte<<8) | (MEMS_Mag_Yout_lowByte);
+    magZ = (MEMS_Mag_Zout_highByte<<8) | (MEMS_Mag_Zout_lowByte);
   }  
+
+  void kmx62FifoRead(){  
+    i2c_start(kmx62Address);
+    i2c_write(KMX_BUF_READ);
+    i2c_rep_start(kmx62Address | 1);
+    for(int n=0; n<24; n++){
+      fifoVal[n] = i2c_read(0);
+    }
+    fifoVal[23] = i2c_read(1);
+    i2c_stop();
+  }
+
