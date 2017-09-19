@@ -18,6 +18,7 @@
 #define I2C_FASTMODE 1
 
 
+
 #include <SoftI2CMaster.h>
 #include <avr/io.h>
 //#include <SoftWire.h> // Wire wrapper for SoftI2C
@@ -48,7 +49,8 @@ File dataFile;
 // sensor values
 int accelX, accelY, accelZ;
 int magX, magY, magZ;
-byte fifoVal[24];
+#define BUF_BYTES 48
+volatile byte fifoVal[BUF_BYTES];
 
 void setup() {
   Serial.begin(115200);
@@ -96,7 +98,7 @@ void setup() {
 }
 
 void loop() {
-    if(kmx62GetFifoPoints()>16){
+    if(kmx62GetFifoPoints()>BUF_BYTES){
       Serial.print(kmx62GetFifoPoints());
       Serial.print(" ");
       kmx62FifoRead();
@@ -107,7 +109,7 @@ void loop() {
 void initSensors(){
   Serial.println(kmx62TestResponse());
   kmx62Init(1); // init with FIFO mode
-  kmx62SampleRate(25);
+  kmx62SampleRate(1600);
   
   kmx62Start(0x5F);
   kmx62ClearFifo();

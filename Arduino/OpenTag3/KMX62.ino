@@ -82,7 +82,7 @@ void writeI2C(int devAddress, int registerAddress, int value){
   i2c_write(registerAddress);
   i2c_write(value);
   i2c_stop();
-  delay(1);
+  __asm__ __volatile__ ("nop\n\t"); // very short delay
 }
  
 int kmx62Init(int fifoMode){
@@ -233,10 +233,10 @@ int kmx62TestResponse(){  // should return 0x55 (decimal 85)
     i2c_start(kmx62Address);
     i2c_write(KMX_BUF_READ);
     i2c_rep_start(kmx62Address | 1);
-    for(int n=0; n<24; n++){
+    for(int n=0; n<BUF_BYTES-1; n++){
       fifoVal[n] = i2c_read(0);
     }
-    fifoVal[23] = i2c_read(1);
+    fifoVal[BUF_BYTES-1] = i2c_read(1);
     i2c_stop();
   }
 
