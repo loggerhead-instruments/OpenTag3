@@ -17,12 +17,8 @@
 #define I2C_TIMEOUT 1000
 #define I2C_FASTMODE 1
 
-
-
 #include <SoftI2CMaster.h>
 #include <avr/io.h>
-//#include <SoftWire.h> // Wire wrapper for SoftI2C
-//SoftWire Wire = SoftWire();
 
 //
 // DEV SETTINGS
@@ -45,12 +41,13 @@ float codeVer = 1.00;
 // SD file system
 SdFat sd;
 File dataFile;
+int fileCount;
 
 // sensor values
 int accelX, accelY, accelZ;
 int magX, magY, magZ;
-#define BUF_BYTES 48
-volatile byte fifoVal[BUF_BYTES];
+#define BUF_BYTES 96
+uint8_t fifoVal[BUF_BYTES];
 
 void setup() {
   Serial.begin(115200);
@@ -80,36 +77,56 @@ void setup() {
        delay(500);
      }
   }
-  
 
+  Serial.println("Init microSD");
+  // see if the card is present and can be initialized:
+  while (!sd.begin(chipSelect, SPI_FULL_SPEED)) {
+    Serial.println("Card failed");
+    digitalWrite(LED_RED, HIGH);
+    delay(200);
+    digitalWrite(LED_RED, LOW);
+    delay(100);
+  }
 
-//  Serial.println("Init microSD");
-//  // see if the card is present and can be initialized:
-//  while (!sd.begin(chipSelect, SPI_FULL_SPEED)) {
-//    Serial.println("Card failed");
-//    digitalWrite(LED_RED, HIGH);
-//    delay(200);
-//    digitalWrite(LED_RED, LOW);
-//    delay(100);
-//  }
-
+  fileInit();
   initSensors();
 
 }
 
+long startTime;
+
 void loop() {
-    if(kmx62GetFifoPoints()>BUF_BYTES){
-      Serial.print(kmx62GetFifoPoints());
-      Serial.print(" ");
-      kmx62FifoRead();
-      Serial.println(fifoVal[1]<<8 | fifoVal[0]);
-    }
+  int fifoPts = kmx62GetFifoPoints();
+  if(fifoPts>BUF_BYTES * 2){
+    Serial.print(millis());
+    Serial.print(" ");
+    Serial.print(millis() - startTime);
+    Serial.print(" ");
+    Serial.print(fifoPts);
+    Serial.print(" ");
+    kmx62FifoRead();
+    dataFile.write(fifoVal, BUF_BYTES);
+    kmx62FifoRead();
+    dataFile.write(fifoVal, BUF_BYTES);
+    Serial.println(fifoVal[1]<<8 | fifoVal[0]);
+    startTime = millis();
+  }
+  if(millis()>30000){
+    dataFile.close();
+    Serial.println("Test done");
+    digitalWrite(LED_RED, HIGH);
+    while(1);
+  }
 }
 
 void initSensors(){
-  Serial.println(kmx62TestResponse());
+  int testResponse = kmx62TestResponse();
+  while(testResponse!=85){
+    Serial.println("KMX not recognized");
+    delay(500);
+  }
   kmx62Init(1); // init with FIFO mode
-  kmx62SampleRate(1600);
+  kmx62SampleRate(100);
   
   kmx62Start(0x5F);
   kmx62ClearFifo();
@@ -131,4 +148,15 @@ void initSensors(){
   kmx62ClearFifo();
 }
 
-
+void fileInit()
+{
+   char filename[13];
+   sprintf(filename,"test.16");
+   dataFile = sd.open(filename, O_WRITE | O_CREAT);
+   while (!dataFile){
+    fileCount += 1;
+    sprintf(filename,"F%06d.amx",fileCount); //if can't open just use count
+    dataFile = sd.open(filename, O_WRITE | O_CREAT | O_EXCL);
+    Serial.println(filename);
+   }
+}

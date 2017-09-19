@@ -107,25 +107,25 @@ void kmx62SampleRate(int srate){
     delay(1);
     switch(srate){
       case 25: 
-        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_25HZ<<8) | KMX_25HZ); //Mag and Accel update rate
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_25HZ<<4) | KMX_25HZ); //Mag and Accel update rate
         break;
       case 50: 
-        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_50HZ<<8) | KMX_50HZ); //Mag and Accel update rate
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_50HZ<<4) | KMX_50HZ); //Mag and Accel update rate
         break;
       case 100: 
-        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_100HZ<<8) | KMX_100HZ); //Mag and Accel update rate
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_100HZ<<4) | KMX_100HZ); //Mag and Accel update rate
         break;
       case 200: 
-        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_200HZ<<8) | KMX_200HZ); //Mag and Accel update rate
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_200HZ<<4) | KMX_200HZ); //Mag and Accel update rate
         break;
       case 400: 
-        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_400HZ<<8) | KMX_400HZ); //Mag and Accel update rate
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_400HZ<<4) | KMX_400HZ); //Mag and Accel update rate
         break;
       case 800: 
-        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_800HZ<<8) | KMX_800HZ); //Mag and Accel update rate
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_800HZ<<4) | KMX_800HZ); //Mag and Accel update rate
         break;
       case 1600: 
-        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_1600HZ<<8) | KMX_1600HZ); //Mag and Accel update rate
+        writeI2C(kmx62Address, KMX_ODCNTL, (KMX_1600HZ<<4) | KMX_1600HZ); //Mag and Accel update rate
         break;
       case 25000: 
         writeI2C(kmx62Address, KMX_ODCNTL, KMX_25KHZ); // Accelerometer ONLY
@@ -234,9 +234,9 @@ int kmx62TestResponse(){  // should return 0x55 (decimal 85)
     i2c_write(KMX_BUF_READ);
     i2c_rep_start(kmx62Address | 1);
     for(int n=0; n<BUF_BYTES-1; n++){
-      fifoVal[n] = i2c_read(0);
+      fifoVal[n] = i2c_read(false);
     }
-    fifoVal[BUF_BYTES-1] = i2c_read(1);
+    fifoVal[BUF_BYTES-1] = i2c_read(true);
     i2c_stop();
   }
 
