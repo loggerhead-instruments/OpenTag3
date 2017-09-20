@@ -1,0 +1,4 @@
+Change Component DesignItemId : Designator=P12 Old DesignItemId=HDR_2x1_2mm New DesignItemId=Burn Screw
+Change Component DesignItemId : Designator=P13 Old DesignItemId=HDR_2x1_2mm New DesignItemId=Burn Screw
+Change Component Footprint: Designator=P12 Old Footprint=HDR_2x1_2mm New Footprint=BURN
+Change Component Footprint: Designator=P13 Old Footprint=HDR_2x1_2mm New Footprint=BURN

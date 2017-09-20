@@ -1,0 +1,6 @@
+Removed Pin From Net: NetName=SPOW Pin=P3-1
+Removed Pin From Net: NetName=VHF_GND Pin=P3-2
+Removed Pin From Net: NetName=SPOW Pin=P13-1
+Removed Pin From Net: NetName=BURN_GND Pin=P13-2
+Removed Member From Class: ClassName=OpenTag3 Member=P3
+Removed Member From Class: ClassName=OpenTag3 Member=P13

@@ -46,7 +46,7 @@ int fileCount;
 // sensor values
 int accelX, accelY, accelZ;
 int magX, magY, magZ;
-#define BUF_BYTES 96
+#define BUF_BYTES 12
 uint8_t fifoVal[BUF_BYTES];
 
 long startTime;
@@ -96,8 +96,6 @@ void setup() {
 
 }
 
-
-
 void loop() {
   int fifoPts = kmx62GetFifoPoints();
   if(fifoPts>BUF_BYTES * 2){
@@ -134,7 +132,7 @@ void initSensors(){
   }
   digitalWrite(LED_RED, LOW);
   kmx62Init(1); // init with FIFO mode
-  kmx62SampleRate(1600);
+  kmx62SampleRate(25);
   
   kmx62Start(0x5F);
   kmx62ClearFifo();
@@ -152,7 +150,6 @@ void initSensors(){
     Serial.println(kmx62GetFifoPoints());
     delay(20);
   }
-
   kmx62ClearFifo();
 }
 

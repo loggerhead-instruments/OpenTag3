@@ -136,7 +136,6 @@ void kmx62SampleRate(int srate){
         writeI2C(kmx62Address, KMX_ODCNTL, KMX_25KHZ); // Accelerometer ONLY
         break;
     }
-    
 }
 
 void kmx62ClearFifo(){

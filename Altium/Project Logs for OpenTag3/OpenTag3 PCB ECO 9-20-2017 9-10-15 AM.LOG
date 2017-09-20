@@ -1,0 +1,17 @@
+Removed Pin From Net: NetName=VCC Pin=C13-1
+Removed Pin From Net: NetName=GND Pin=C13-2
+Removed Pin From Net: NetName=VCC Pin=C14-1
+Removed Pin From Net: NetName=GND Pin=C14-2
+Removed Pin From Net: NetName=VCC Pin=U7-1
+Removed Pin From Net: NetName=GND Pin=U7-3
+Removed Pin From Net: NetName=SCL Pin=U7-4
+Removed Pin From Net: NetName=GND Pin=U7-5
+Removed Pin From Net: NetName=SDA Pin=U7-6
+Removed Pin From Net: NetName=GND Pin=U7-7
+Removed Pin From Net: NetName=KMX_2 Pin=U7-9
+Removed Pin From Net: NetName=KMX_1 Pin=U7-11
+Removed Pin From Net: NetName=GND Pin=U7-12
+Removed Pin From Net: NetName=VCC Pin=U7-14
+Removed Member From Class: ClassName=OpenTag3_Sensors Member=C13
+Removed Member From Class: ClassName=OpenTag3_Sensors Member=C14
+Removed Member From Class: ClassName=OpenTag3_Sensors Member=U7

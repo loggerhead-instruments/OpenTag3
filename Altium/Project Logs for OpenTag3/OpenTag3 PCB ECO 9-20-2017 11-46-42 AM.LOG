@@ -1,0 +1,6 @@
+Change Component DesignItemId : Designator=P3 Old DesignItemId=HDR_2x1_2mm New DesignItemId=Header 2
+Change Component DesignItemId : Designator=P6 Old DesignItemId=HDR_2x1_2mm New DesignItemId=Header 2
+Change Component Footprint: Designator=P3 Old Footprint=HDR_2x1_2mm New Footprint=HDR1X2
+Change Component Footprint: Designator=P6 Old Footprint=HDR_2x1_2mm New Footprint=HDR1X2
+Change Component Comment : Designator=P3 Old Comment=VHF New Comment=Header 2
+Change Component Comment : Designator=P6 Old Comment=VHF New Comment=Header 2
