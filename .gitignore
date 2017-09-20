@@ -2,3 +2,5 @@
 Altium/*.LOG
 Altium/__Previews/*.*
 *.PcbDocPreview
+*.LOG
+*.PcbDocPreview
