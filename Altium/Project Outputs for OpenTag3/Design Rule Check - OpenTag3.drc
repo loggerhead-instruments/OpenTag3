@@ -1,7 +1,7 @@
 Protel Design System Design Rule Check
 PCB File : C:\w\OpenTag3\Altium\OpenTag3.PcbDoc
 Date     : 9/25/2017
-Time     : 5:54:07 PM
+Time     : 6:02:50 PM
 
 Processing Rule : Short-Circuit Constraint (Allowed=No) (All),(All)
 Rule Violations :0
@@ -367,10 +367,12 @@ Processing Rule : Silk To Solder Mask (Clearance=10mil) (IsPad),(All)
                      Pad P14-1(-2310mil,130mil)  Multi-Layer
    Violation between Text "Tx" (-2225mil,715mil)  Top Overlay and 
                      Pad P11-2(-2260.711mil,744.289mil)  Multi-Layer
-   Violation between Text "V" (-2400mil,525mil)  Top Overlay and 
+   Violation between Text "V" (-2365mil,555mil)  Top Overlay and 
                      Pad P11-4(-2402.132mil,602.868mil)  Multi-Layer
    Violation between Text "V" (-2365mil,525mil)  Bottom Overlay and 
                      Pad P11-4(-2402.132mil,602.868mil)  Multi-Layer
+   Violation between Text "G" (-2440mil,485mil)  Top Overlay and 
+                     Pad P11-5(-2472.843mil,532.157mil)  Multi-Layer
    Violation between Text "G" (-2415mil,470mil)  Bottom Overlay and 
                      Pad P11-5(-2472.843mil,532.157mil)  Multi-Layer
    Violation between Text "G" (-2250mil,430mil)  Top Overlay and 
@@ -419,7 +421,7 @@ Processing Rule : Silk To Solder Mask (Clearance=10mil) (IsPad),(All)
                      Pad R6-1(-1886.535mil,-195mil)  Bottom Layer
    Violation between Track (-2026.85mil,-164.37mil)(-1907.756mil,-164.37mil)  Bottom Overlay and 
                      Pad R6-1(-1886.535mil,-195mil)  Bottom Layer
-Rule Violations :53
+Rule Violations :54
 
 Processing Rule : Silk to Silk (Clearance=10mil) (All),(All)
    Violation between Text "ON" (-1715.001mil,604mil)  Bottom Overlay and 
@@ -457,5 +459,5 @@ Processing Rule : Net Antennae (Tolerance=0mil) (All)
 Rule Violations :0
 
 
-Violations Detected : 214
+Violations Detected : 215
 Time Elapsed        : 00:00:01
