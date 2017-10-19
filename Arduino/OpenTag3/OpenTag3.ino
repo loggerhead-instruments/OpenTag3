@@ -270,13 +270,14 @@ void initSensors(){
 //  }
   // flash LED with current hour
   digitalWrite(LED_RED, HIGH);
-  delay(200);
+  digitalWrite(LED_GRN, LOW);
+  delay(1000);
   readRTC();
   for(int i=0; i<hour; i++){
+    delay(300);
     digitalWrite(LED_GRN, HIGH);
-    delay(80);
+    delay(100);
     digitalWrite(LED_GRN, LOW);
-    delay(220);
   }
   digitalWrite(LED_RED, LOW);
 
