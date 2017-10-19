@@ -4,82 +4,165 @@
 // OpenTag3 is an underwater motion datalogger
 // designed around the ATMEGA328p
 
+// OpenTag3 supports the following sensors:
+// Pressure/Temperature
+// acclerometer/magnetometer
+// RGB light
+
+
+/*
+ * 
+ *  pressure/temperature: test in water---not sure why formula in spec sheet seems to be wrong. Adjusted MS58xx_constant 163840.0
+ *  RTC not ticking--layout issues? Try opentag RTC connected to board. See I2C signals on CLKOUT
+ *  IMU not reliably connecting
+ *  Burn
+ *  VHF
+ *  write SD
+ *  stop button
+ * 
+ * interrupt mode
+ * read impeller
+ * 
+ * read voltage
+ */
+
+
+//#include <Wire.h>
 #include <SPI.h>
 #include <SdFat.h>
+#include <MsTimer2.h> 
 #include <avr/sleep.h>
 #include <avr/power.h>
+#include <prescaler.h>
 
-// Using SoftWire because Arduino Wire library does not work with KMX62 accel/mag
 #define SDA_PORT PORTC
 #define SDA_PIN 4
 #define SCL_PORT PORTC
 #define SCL_PIN 5
+
 #define I2C_TIMEOUT 100
 #define I2C_FASTMODE 1
 
-#include <SoftI2CMaster.h>
+#include <SoftWire.h>
 #include <avr/io.h>
 
-//
-// DEV SETTINGS
-//
-float codeVer = 1.00;
+SoftWire Wire = SoftWire();
 
 //
 // DEV SETTINGS
 //
+float codeVer = 1.01;
+int printDiags = 1;
+
+int recDur = 300;
+int recInt = 0;
+int LED_EN = 1; //enable green LEDs flash 1x per second. Can be disabled from script.
+
+#define MS5837_30bar // Pressure sensor. Each sensor has different constants.
+//
+//
+
+#ifdef MS5837_30bar
+  #define MS58xx_constant 163840.0
+  #define pressAddress 0x76
+#endif
+#ifdef MS5803_01bar
+  #define MS58xx_constant 32768.0
+  #define pressAddress 0x77
+#endif
+#ifdef MS5803_05bar
+  #define MS58xx_constant 32768.0
+  #define pressAddress 0x77
+#endif
+#ifdef MS5803_30bar
+  #define MS58xx_constant 8192.0
+  #define pressAddress 0x77
+#endif
 
 // pin assignments
-#define chipSelect 10
-#define LED_GRN 4
-#define LED_RED A3
-#define BURN 8
-#define VHFPOW 9
-#define BUTTON1 A2
-#define SD_POW 5
+#define chipSelect  10
+#define LED_GRN A3  // PD4
+#define LED_RED 4 // PC3
+#define BURN 8     // PB0
+#define VHFPOW 9   // PB1
+#define BUTTON1 A2 // PC2
+#define BAT_VOLTAGE A7// ADC7
 
 // SD file system
 SdFat sd;
 File dataFile;
-int fileCount;
+int fileCount; 
 
-// sensor values
-int accelX, accelY, accelZ;
-int magX, magY, magZ;
-#define BUF_BYTES 12
-uint8_t fifoVal[BUF_BYTES];
+int ssCounter; // used to get different sample rates from one timer based on imu_srate
+byte clockprescaler=0;  //clock prescaler
 
-long startTime;
+//
+// SENSORS
+//
+byte imuTempBuffer[20];
+int imuSrate = 100; // must be integer for timer
+int sensorSrate = 1; // must divide into imuSrate
+int slowRateMultiple = imuSrate / sensorSrate;
+int speriod = 1000 / imuSrate;
+
+//Pressure and temp calibration coefficients
+uint16_t PSENS; //pressure sensitivity
+uint16_t POFF;  //Pressure offset
+uint16_t TCSENS; //Temp coefficient of pressure sensitivity
+uint16_t TCOFF; //Temp coefficient of pressure offset
+uint16_t TREF;  //Ref temperature
+uint16_t TEMPSENS; //Temperature sensitivity coefficient
+byte Tbuff[3];
+byte Pbuff[3];
+volatile float depth, temperature, pressure_mbar;
+boolean togglePress = 0; // flag to toggle conversion of temperature and pressure
+
+// RGB
+int16_t islRed;
+int16_t islBlue;
+int16_t islGreen;
+int16_t accelX, accelY, accelZ;
+int16_t magX, magY, magZ;
+int16_t gyroX, gyroY, gyroZ;
+
+int accel_scale = 16;
+
+// System Modes and Status
+int mode = 0; //standby = 0; running = 1
+volatile float voltage;
+
+// Time
+volatile byte second = 0;
+volatile byte minute = 0;
+volatile byte hour = 17;
+volatile byte day = 1;
+volatile byte month = 1;
+volatile byte year = 17;
+
+unsigned long t, startTime, endTime, burnTime;
+int burnFlag = 0;
+long burnSeconds;
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("On");
-  delay(1000);
-
   pinMode(LED_GRN, OUTPUT);
   pinMode(LED_RED, OUTPUT);
   pinMode(BURN, OUTPUT);
   pinMode(VHFPOW, OUTPUT);
-  pinMode(BUTTON1, INPUT);
+  pinMode(BUTTON1, INPUT_PULLUP);
+  pinMode(BAT_VOLTAGE, INPUT);
   digitalWrite(BURN,LOW);
   digitalWrite(LED_RED,LOW);
   digitalWrite(LED_GRN,HIGH);
   digitalWrite(VHFPOW, LOW);
   digitalWrite(BURN, LOW);
-  pinMode(SD_POW, OUTPUT);      
-  digitalWrite(SD_POW, HIGH); 
-  
-  byte I2C_check = i2c_init();
-  if(I2C_check == false){
-    Serial.println("I2C Init Failed--SDA or SCL may not be pulled up!");
-     while(1){
-       digitalWrite(LED_RED, HIGH);
-       delay(500);
-       digitalWrite(LED_RED, LOW);
-       delay(500);
-     }
-  }
+  pinMode(2, INPUT); //Arduino Interrupt2
+  pinMode(3, INPUT); //Arduino Interrupt1
 
+  delay(2000);
+  Serial.println("OT3");
+  Wire.begin();
+  
   Serial.println("Init microSD");
   // see if the card is present and can be initialized:
   while (!sd.begin(chipSelect, SPI_FULL_SPEED)) {
@@ -89,79 +172,315 @@ void setup() {
     digitalWrite(LED_RED, LOW);
     delay(100);
   }
-
-  fileInit();
+  loadScript(); // do this early to set time
   initSensors();
-  startTime = millis();
+  readRTC();
+  Serial.print(year); Serial.print(" ");
+ Serial.print(month);Serial.print(" ");
+ Serial.print(day);Serial.print(" ");
+ Serial.print(hour);Serial.print(" ");
+ Serial.print(minute);Serial.print(" ");
+ Serial.print(second);
+
+ logFileWrite();
+  
+  if(burnFlag==2){
+    burnTime = t + burnSeconds;
+    Serial.print("Burn time set");
+    Serial.println(burnTime);
+  }
+  if(startTime==0) startTime = t + 0; 
+  Serial.print("Time:"); Serial.println(t);
+  Serial.print("Start Time:"); Serial.println(startTime);
+  digitalWrite(LED_GRN, LOW);
+  digitalWrite(LED_RED, LOW);
+
+  setClockPrescaler(clockprescaler); // set clockprescaler from script file
+
+  //setupWDT(11); // initialize and activate WDT with maximum period (~500 ms)
 
 }
 
 void loop() {
-  int fifoPts = kmx62GetFifoPoints();
-  if(fifoPts>BUF_BYTES * 2){
-//    Serial.print(millis());
-//    Serial.print(" ");
-//    Serial.print(millis() - startTime);
-//    Serial.print(" ");
-//    Serial.print(fifoPts);
-//    Serial.print(" ");
-    kmx62FifoRead();
-    dataFile.write(fifoVal, BUF_BYTES);
-    kmx62FifoRead();
-    dataFile.write(fifoVal, BUF_BYTES);
-//    Serial.println(fifoVal[1]<<8 | fifoVal[0]);
-//    startTime = millis();
-  }
-  if(millis() - startTime>10000){
-    dataFile.close();
-    Serial.println("Test done");
-    digitalWrite(LED_RED, HIGH);
-    while(1);
+  while(mode==0){
+    // resetWdt();
+    readRTC();
+    checkBurn();
+    Serial.print(t); Serial.print(" "); Serial.println(startTime);
+    delay(1000);
+    if(t >= startTime){
+      endTime = startTime + recDur;
+      startTime += recDur + recInt;  // this will be next start time for interval record
+      fileInit();
+      updateTemp();  // get first reading ready
+      mode = 1;
+      startInterruptTimer(speriod, clockprescaler);
+    }
+  } // mode = 0
+
+  // Recording: check if time to end
+  // int downTime = millis();
+  while(mode==1){
+    // resetWdt();
+
+    
+//    if(t>=endTime){
+//      dataFile.close(); // close file
+//      if(recInt==0){  // no interval between files
+//        endTime += recDur;  // update end time
+//        fileInit();
+//        break;
+//      }
+//      mode = 0;
+//      break;
+//    }
+
+    // Check if stop button pressed
+    if(digitalRead(BUTTON1)==0){
+      delay(10); // simple deBounce
+      if(digitalRead(BUTTON1)==0){
+        stopTimer();
+        digitalWrite(LED_RED, HIGH);
+        dataFile.close();
+        delay(30000);
+        // wait 30 s to stop
+        startInterruptTimer(speriod, clockprescaler);
+        fileInit();
+        digitalWrite(LED_RED, LOW);
+      }
+    }
   }
 }
 
 void initSensors(){
-  int testResponse = kmx62TestResponse();
-  while(testResponse!=85){
-    Serial.print("KMX not recognized: ");
-    Serial.println(testResponse);
-    delay(500);
-    digitalWrite(LED_RED, HIGH);
-    kmx62Reset();
-    testResponse = kmx62TestResponse();
+//
+//  Serial.print("Stop");
+//  for(int x = 0; x<100; x++){
+//    Serial.println(digitalRead(BUTTON1));
+//    delay(100);
+//  }
+
+  for(int x = 0; x<100; x++){
+    readVoltage();
+    Serial.println(voltage);
+    delay(100);
   }
-  digitalWrite(LED_RED, LOW);
-  kmx62Init(1); // init with FIFO mode
-  kmx62SampleRate(25);
-  
-  kmx62Start(0x5F);
-  kmx62ClearFifo();
-  
-  for(int x=0; x<100; x++){
-    kmx62Read();
-    Serial.print("Accel/Mag ");
-    Serial.print(accelX); Serial.print(" ");
-    Serial.print(accelY); Serial.print(" ");
-    Serial.print(accelZ); Serial.print(" ");
-    Serial.print(magX); Serial.print(" ");
-    Serial.print(magY); Serial.print(" ");
-    Serial.println(magZ);
-    Serial.print("Fifo:");
-    Serial.println(kmx62GetFifoPoints());
-    delay(20);
+
+  reset_alarm();
+  Serial.println(rtcStatus());
+  for(int i=0; i<10; i++){
+    readRTC();
+    Serial.println(second);
+    delay(1000);
   }
-  kmx62ClearFifo();
+  
+  // Pressure/Temperature
+  pressInit();
+  updatePress();
+  delay(20);
+  readPress();
+  updateTemp();
+  delay(20);
+  readTemp();
+  calcPressTemp();
+  Serial.print(" press:"); Serial.print(pressure_mbar);
+  Serial.print(" depth:"); Serial.print(depth);
+  Serial.print(" temp:"); Serial.println(temperature);
+
+  islInit();
+  for (int x=0; x<50; x++){
+    islRead();
+    Serial.println("RGB");
+    Serial.print(islRed); Serial.print("\t");
+    Serial.print(islGreen); Serial.print("\t");
+    Serial.println(islBlue);
+    delay(100);
+  }
+  
+  mpuInit(1);
+  for(int i=0; i<100; i++){
+      readImu();
+      calcImu();
+      printImu();
+      delay(200);
+    }
+}
+
+void calcImu(){
+      accelX = (int16_t) ((int16_t)imuTempBuffer[0] << 8 | imuTempBuffer[1]);    
+      accelY = (int16_t) ((int16_t)imuTempBuffer[2] << 8 | imuTempBuffer[3]);   
+      accelZ = (int16_t) ((int16_t)imuTempBuffer[4] << 8 | imuTempBuffer[5]);    
+      
+     // gyroTemp = (int16_t) (((int16_t)imuTempBuffer[6]) << 8 | imuTempBuffer[7]);   
+     
+      gyroX = (int16_t)  (((int16_t)imuTempBuffer[8] << 8) | imuTempBuffer[9]);   
+      gyroY = (int16_t)  (((int16_t)imuTempBuffer[10] << 8) | imuTempBuffer[11]); 
+      gyroZ = (int16_t)  (((int16_t)imuTempBuffer[12] << 8) | imuTempBuffer[13]);   
+      
+      magX = (int16_t)  (((int16_t)imuTempBuffer[14] << 8) | imuTempBuffer[15]);   
+      magY = (int16_t)  (((int16_t)imuTempBuffer[16] << 8) | imuTempBuffer[17]);   
+      magZ = (int16_t)  (((int16_t)imuTempBuffer[18] << 8) | imuTempBuffer[19]);  
+}
+
+void printImu(){
+      Serial.print("a/m/g:\t");
+      Serial.print(accelX); Serial.print("\t");
+      Serial.print(accelY); Serial.print("\t");
+      Serial.print(accelZ); Serial.print("\t");
+      Serial.print(magX); Serial.print("\t");
+      Serial.print(magY); Serial.print("\t");
+      Serial.print(magZ); Serial.print("\t");
+      Serial.print(gyroX); Serial.print("\t");
+      Serial.print(gyroY); Serial.print("\t");
+      Serial.println(gyroZ);
+}
+
+void fileWriteImu(){
+  dataFile.print(accelX); dataFile.print(",");
+  dataFile.print(accelY); dataFile.print(",");
+  dataFile.print(accelZ); dataFile.print(",");
+  dataFile.print(magX); dataFile.print(",");
+  dataFile.print(magY); dataFile.print(",");
+  dataFile.print(magZ); dataFile.print(",");
+  dataFile.print(gyroX); dataFile.print(",");
+  dataFile.print(gyroY); dataFile.print(",");
+  dataFile.print(gyroZ);
+}
+
+void fileWriteSlowSensors(){
+   dataFile.print(','); dataFile.print(year);  
+    dataFile.print('-');
+    if(month < 10) dataFile.print('0');
+    dataFile.print(month);
+    dataFile.print('-');
+    if(day < 10) dataFile.print('0');
+    dataFile.print(day);
+    dataFile.print('T');
+    if(hour) dataFile.print('0');
+    dataFile.print(hour);
+    dataFile.print(':');
+   if(minute < 10) dataFile.print('0');
+   dataFile.print(minute);
+   dataFile.print(':');
+   if(second < 10) dataFile.print('0');
+   dataFile.print(second);
+   dataFile.print("Z,");
+    dataFile.print(islRed);
+    dataFile.print(','); dataFile.print(islGreen);
+    dataFile.print(','); dataFile.print(islBlue);
+    dataFile.print(','); dataFile.print(pressure_mbar);
+    dataFile.print(','); dataFile.print(depth);
+    dataFile.print(','); dataFile.print(temperature);
+    dataFile.print(','); dataFile.print(voltage);
+}
+
+void logFileWrite()
+{
+   readRTC();
+   
+   File logFile = sd.open("log.txt", O_WRITE | O_CREAT | O_APPEND);
+   logFile.print("Code version:"); logFile.println(codeVer);
+   logFile.print(year);  logFile.print("-");
+   logFile.print(month); logFile.print("-");
+   logFile.print(day); logFile.print("T");
+   logFile.print(hour); logFile.print(":");
+   logFile.print(minute); logFile.print(":");
+   logFile.println(second);
+
+   logFile.close();
+}
+
+
+void flatFileOpen()
+{
+   readRTC();
+   
+   dataFile = sd.open("flat.csv", O_WRITE | O_CREAT);
+   dataFile.println("accelX,accelY,accelZ,magX,magY,magZ");
+   SdFile::dateTimeCallback(file_date_time);
 }
 
 void fileInit()
 {
-   char filename[13];
-   sprintf(filename,"test.16");
-   dataFile = sd.open(filename, O_WRITE | O_CREAT);
+   char filename[60];
+   sprintf(filename,"%02d%02d%02dT%02d%02d%02d.csv", year, month, day, hour, minute, second);  //filename is DDHHMM
+   dataFile = sd.open(filename, O_WRITE | O_CREAT | O_APPEND);
    while (!dataFile){
     fileCount += 1;
     sprintf(filename,"F%06d.amx",fileCount); //if can't open just use count
     dataFile = sd.open(filename, O_WRITE | O_CREAT | O_EXCL);
     Serial.println(filename);
+    delay(100);
    }
+   dataFile.println("accelX,accelY,accelZ,magX,magY,magZ,gyroX,gyroY,gyroZ,datetime,red,green,blue,mBar,depth,temperature,V");
+   SdFile::dateTimeCallback(file_date_time);
+   Serial.println(filename);
 }
+
+/********************************************************************
+***        Master Interrupt Routine to Read Sensors               ***
+********************************************************************/
+void sampleSensors(void){  
+    ssCounter++;
+    readImu();
+    calcImu();
+    fileWriteImu();
+    
+    if(ssCounter>=slowRateMultiple){
+      // MS58xx pressure and temperature
+      readTemp();
+      updatePress();  
+      if(LED_EN) digitalWrite(LED_GRN, HIGH);
+      islRead(); // RGB in between to give temperature time to convert
+      readRTC();
+      checkBurn();
+      checkVHF();
+      readPress();   
+      updateTemp();
+      calcPressTemp(); // MS58xx pressure and temperature
+      fileWriteSlowSensors();
+      ssCounter = 0;
+      digitalWrite(LED_GRN, LOW);
+    }
+    
+    dataFile.println();
+}
+
+//This function returns the date and time for SD card file access and modify time. One needs to call in setup() to register this callback function: SdFile::dateTimeCallback(file_date_time);
+void file_date_time(uint16_t* date, uint16_t* time) 
+{
+  *date=FAT_DATE(year + 2000,month,day);
+  *time=FAT_TIME(hour,minute,second);
+}
+
+int checkBurn(){
+  if((t>=burnTime) & (burnFlag>0)){
+    digitalWrite(BURN, HIGH);
+    digitalWrite(VHFPOW, HIGH);
+  }
+}
+
+void checkVHF(){
+  if(depth<1.0) {
+      digitalWrite(VHFPOW, HIGH);
+    }
+    else{
+      if((depth>1.5)) {
+        digitalWrite(VHFPOW, LOW);
+      }
+    }
+}
+
+void readVoltage(){
+  voltage = analogRead(BAT_VOLTAGE) * 0.0042;
+}
+
+void startInterruptTimer(int speriod, byte clockprescaler){
+    MsTimer2::set(speriod>>clockprescaler, sampleSensors); // bitshift by clockprescaler...will round if not even
+    MsTimer2::start();
+}
+
+void stopTimer(){
+    MsTimer2::stop();
+}
+
