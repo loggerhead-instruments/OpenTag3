@@ -79,8 +79,8 @@ int ProcCmd(char *pCmd)
     {
       sscanf(&pCmd[3],"%d",&lv1);
       recDur = lv1;
-      Serial.print("Rec dur:");
-      Serial.println(recDur);
+//      Serial.print("Rec dur:");
+//      Serial.println(recDur);
       break;
     }
     
@@ -88,10 +88,24 @@ int ProcCmd(char *pCmd)
     {
       sscanf(&pCmd[3],"%d",&lv1);
       recInt = lv1;
-      Serial.print("Rec int:");
-      Serial.println(recInt);
+//      Serial.print("Rec int:");
+//      Serial.println(recInt);
       break;
     } 
+
+    case ('I' + ('S'<<8)):
+    {
+      sscanf(&pCmd[3],"%d",&lv1);
+      imuSrate = lv1;
+      break;
+    }
+
+    case ('P' + ('S'<<8)):
+    {
+      sscanf(&pCmd[3],"%d",&lv1);
+      sensorSrate = lv1;
+      break;
+    }
 
     // disable LED
     case ('L' + ('D'<<8)):
