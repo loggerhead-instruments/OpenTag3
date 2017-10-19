@@ -215,7 +215,7 @@ int intStatus(){
   { 
     intStatus = Wire.read();  // receive one byte
   }
-   
+ Wire.endTransmission();  
  return intStatus; 
 }
 

@@ -51,7 +51,7 @@ SoftWire Wire = SoftWire();
 //
 // DEV SETTINGS
 //
-float codeVer = 1.01;
+float codeVer = 1.00;
 int printDiags = 1;
 
 int recDur = 300;
@@ -100,7 +100,7 @@ byte clockprescaler=0;  //clock prescaler
 // SENSORS
 //
 byte imuTempBuffer[20];
-int imuSrate = 100; // must be integer for timer
+int imuSrate = 50; // must be integer for timer
 int sensorSrate = 1; // must divide into imuSrate
 int slowRateMultiple = imuSrate / sensorSrate;
 int speriod = 1000 / imuSrate;
@@ -260,11 +260,12 @@ void initSensors(){
 //    delay(100);
 //  }
 
-  for(int x = 0; x<100; x++){
-    readVoltage();
-    Serial.println(voltage);
-    delay(100);
-  }
+//// Battery Voltage
+//  for(int x = 0; x<100; x++){
+//    readVoltage();
+//    Serial.println(voltage);
+//    delay(100);
+//  }
 
   reset_alarm();
   Serial.println(rtcStatus());
@@ -276,21 +277,24 @@ void initSensors(){
   
   // Pressure/Temperature
   pressInit();
-  updatePress();
-  delay(20);
-  readPress();
-  updateTemp();
-  delay(20);
-  readTemp();
-  calcPressTemp();
-  Serial.print(" press:"); Serial.print(pressure_mbar);
-  Serial.print(" depth:"); Serial.print(depth);
-  Serial.print(" temp:"); Serial.println(temperature);
+  for(int x=0; x<10; x++){
+    updatePress();
+    delay(100);
+    readPress();
+    updateTemp();
+    delay(100);
+    readTemp();
+    calcPressTemp();
+    Serial.print(" press:"); Serial.print(pressure_mbar);
+    Serial.print(" depth:"); Serial.print(depth);
+    Serial.print(" temp:"); Serial.println(temperature);
+  }
+
 
   islInit();
-  for (int x=0; x<50; x++){
+  Serial.println("RGB");
+  for (int x=0; x<30; x++){
     islRead();
-    Serial.println("RGB");
     Serial.print(islRed); Serial.print("\t");
     Serial.print(islGreen); Serial.print("\t");
     Serial.println(islBlue);
@@ -425,18 +429,25 @@ void sampleSensors(void){
     readImu();
     calcImu();
     fileWriteImu();
+
+  // MS58xx start temperature conversion half-way through
+  if((ssCounter>=(0.5 * slowRateMultiple))  & togglePress){ 
+    readPress();   
+    updateTemp();
+    togglePress = 0;
+  }
     
     if(ssCounter>=slowRateMultiple){
       // MS58xx pressure and temperature
       readTemp();
       updatePress();  
+      togglePress = 1;
+      
       if(LED_EN) digitalWrite(LED_GRN, HIGH);
       islRead(); // RGB in between to give temperature time to convert
       readRTC();
       checkBurn();
       checkVHF();
-      readPress();   
-      updateTemp();
       calcPressTemp(); // MS58xx pressure and temperature
       fileWriteSlowSensors();
       ssCounter = 0;
