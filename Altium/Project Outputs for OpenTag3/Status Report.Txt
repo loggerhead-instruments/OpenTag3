@@ -1,0 +1,10 @@
+Output: Generates pick and place files
+Type  : Pick Place
+From  : Variant [[No Variations]] of Project [OpenTag3.PrjPCB]
+   Generated File[Pick Place for OpenTag3.csv]
+
+
+Files Generated   : 1
+Documents Printed : 0
+
+Finished Output Generation At 8:51:42 AM On 10/18/2017
