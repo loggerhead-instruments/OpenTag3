@@ -57,7 +57,15 @@ int ProcCmd(char *pCmd)
          break;
       }
 
-      
+     // Burn Minutes (burn set number of minutes after start)
+      case ('B' + ('M'<<8)):
+      {
+           sscanf(&pCmd[3],"%d",&lv1);
+           burnSeconds = lv1 * 60;
+           burnFlag = 2;
+           break;
+      }
+         
       case ('S' + ('T'<<8)):
       {
         //start time
@@ -66,14 +74,7 @@ int ProcCmd(char *pCmd)
          break;
       } 
       
-    // Burn Minutes (burn set number of minutes after start)
-    case ('B' + ('M'<<8)):
-    {
-         sscanf(&pCmd[3],"%d",&lv1);
-         burnSeconds = lv1 * 60;
-         burnFlag = 2;
-         break;
-    }
+
       
     case ('R' + ('D'<<8)):
     {

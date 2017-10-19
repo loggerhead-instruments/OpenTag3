@@ -12,10 +12,10 @@
 
 /*
  *  pressure/temperature: test in water---not sure why formula in spec sheet seems to be wrong. Adjusted MS58xx_constant 163840.0
- *  Burn
- *  VHF
  *  WDT
  *  check if serial number unique
+ *  
+ *  check for errors on sensor init
  *  
  *  read impeller
  */
@@ -51,7 +51,7 @@ int printDiags = 1;
 
 int recDur = 300;
 int recInt = 0;
-int LED_EN = 1; //enable green LEDs flash 1x per second. Can be disabled from script.
+int LED_EN = 1; //enable green LEDs flash 1x per pressure read. Can be disabled from script.
 
 #define MS5837_30bar // Pressure sensor. Each sensor has different constants.
 //
@@ -269,6 +269,8 @@ void initSensors(){
 //    delay(1000);
 //  }
   // flash LED with current hour
+  digitalWrite(LED_RED, HIGH);
+  delay(200);
   readRTC();
   for(int i=0; i<hour; i++){
     digitalWrite(LED_GRN, HIGH);
@@ -276,6 +278,7 @@ void initSensors(){
     digitalWrite(LED_GRN, LOW);
     delay(220);
   }
+  digitalWrite(LED_RED, LOW);
 
   // Pressure/Temperature
   pressInit();
@@ -453,8 +456,8 @@ void sampleSensors(void){
       if(LED_EN) digitalWrite(LED_GRN, HIGH);
       islRead(); // RGB in between to give temperature time to convert
       readRTC();
-      checkBurn();
       checkVHF();
+      checkBurn();
       calcPressTemp(); // MS58xx pressure and temperature
       fileWriteSlowSensors();
       ssCounter = 0;
