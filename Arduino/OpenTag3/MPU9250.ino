@@ -1,5 +1,5 @@
 int CompassAddress = 0x0C;  //0x0C internal compass on 9150
-int GyroAddress = 0x68;
+int GyroAddress = 0x69;
 
 #define AKM_REG_WHOAMI      (0x00)
 
@@ -108,13 +108,12 @@ void readImu()
   int i = 0;
   Wire.beginTransmission(GyroAddress); 
   Wire.write(0x3B);        //sends address to read from  0x3B is direct read; 0x74 is FIFO
-  Wire.endTransmission(0); //send restart to keep connection alive
-  Wire.requestFrom(GyroAddress, 20, 0); //send restart to keep alive
+  Wire.endTransmission(false); //send restart to keep connection alive
+  Wire.requestFrom(GyroAddress, 20); //send restart to keep alive
   while(Wire.available()){
     imuTempBuffer[i] = Wire.read(); 
     i++;
   }
-  Wire.endTransmission();
 }
 
 int getImuFifo()
@@ -127,7 +126,7 @@ int getImuFifo()
     
   Wire.beginTransmission(GyroAddress); 
   Wire.write(0x72);        //sends address to read from
-  Wire.endTransmission(); //end transmission
+  Wire.endTransmission(false); //end transmission
   Wire.requestFrom(GyroAddress, 2);    // request 6 bytes from device
   
   byte FIFO_CNT[2];
@@ -205,7 +204,7 @@ int intStatus(){
   byte intStatus; 
   Wire.beginTransmission(GyroAddress); 
   Wire.write(0x3A);        //sends address to read from
-  Wire.endTransmission(); //end transmission
+  Wire.endTransmission(false); //end transmission
   Wire.requestFrom(GyroAddress, 1);    // request 6 bytes from device
   
   byte FIFO_CNT[2];
@@ -215,7 +214,6 @@ int intStatus(){
   { 
     intStatus = Wire.read();  // receive one byte
   }
- Wire.endTransmission();  
  return intStatus; 
 }
 

@@ -11,19 +11,13 @@
 
 
 /*
- * 
  *  pressure/temperature: test in water---not sure why formula in spec sheet seems to be wrong. Adjusted MS58xx_constant 163840.0
  *  RTC not ticking--layout issues? Try opentag RTC connected to board. See I2C signals on CLKOUT
  *  IMU not reliably connecting
  *  Burn
  *  VHF
- *  write SD
- *  stop button
  * 
- * interrupt mode
  * read impeller
- * 
- * read voltage
  */
 
 
@@ -159,7 +153,6 @@ void setup() {
   pinMode(2, INPUT); //Arduino Interrupt2
   pinMode(3, INPUT); //Arduino Interrupt1
 
-  delay(2000);
   Serial.println("OT3");
   Wire.begin();
   
@@ -268,13 +261,22 @@ void initSensors(){
 //  }
 
   reset_alarm();
-  Serial.println(rtcStatus());
-  for(int i=0; i<10; i++){
-    readRTC();
-    Serial.println(second);
-    delay(1000);
+//  Serial.println(rtcStatus());
+//  for(int i=0; i<10; i++){
+//    readRTC();
+//    Serial.println(second);
+//    delay(1000);
+//  }
+
+  // flash LED with current hour
+  readRTC();
+  for(int i=0; i<hour; i++){
+    digitalWrite(LED_GRN, HIGH);
+    delay(40);
+    digitalWrite(LED_GRN, LOW);
+    delay(160);
   }
-  
+
   // Pressure/Temperature
   pressInit();
   for(int x=0; x<10; x++){
