@@ -139,15 +139,15 @@ boolean loadScript()
       file.close();  
       
       // comment out TM line if it exists
-//      if (comment_TM)
-//      {
-//        Serial.print("Comment TM ");
-//        Serial.println(TM_byte);
-//        file = sd.open("setup.txt", FILE_WRITE);
-//        file.seek(TM_byte);
-//        file.print("//");
-//        file.close();
-//      }
+      if (comment_TM)
+      {
+        Serial.print("Comment TM ");
+        Serial.println(TM_byte);
+        file = sd.open("setup.txt", FILE_WRITE);
+        file.seek(TM_byte);
+        file.print("//");
+        file.close();
+      }
       
   }
   else
