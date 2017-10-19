@@ -82,6 +82,7 @@ int LED_EN = 1; //enable green LEDs flash 1x per pressure read. Can be disabled 
 #define VHFPOW 9   // PB1
 #define BUTTON1 A2 // PC2
 #define BAT_VOLTAGE A7// ADC7
+#define HALL 3 // PD3 (INT1)
 
 // SD file system
 SdFat sd;
@@ -122,6 +123,9 @@ int16_t gyroX, gyroY, gyroZ;
 
 int accel_scale = 16;
 
+// impeller spin counter
+volatile int spin;
+
 // System Modes and Status
 int mode = 0; //standby = 0; running = 1
 volatile float voltage;
@@ -146,6 +150,9 @@ void setup() {
   pinMode(VHFPOW, OUTPUT);
   pinMode(BUTTON1, INPUT_PULLUP);
   pinMode(BAT_VOLTAGE, INPUT);
+  pinMode(HALL, INPUT);
+
+  
   digitalWrite(BURN,LOW);
   digitalWrite(LED_RED,LOW);
   digitalWrite(LED_GRN,HIGH);
@@ -209,6 +216,7 @@ void loop() {
       updateTemp();  // get first reading ready
       mode = 1;
       startInterruptTimer(speriod, clockprescaler);
+      attachInterrupt(digitalPinToInterrupt(HALL), spinCount, RISING);
     }
   } // mode = 0
 
@@ -246,7 +254,17 @@ void loop() {
   
 }
 
+
+//boolean ledState;
+void spinCount(){
+  //ledState = !ledState;
+  //digitalWrite(LED_RED, ledState);
+  spin++;
+
+}
+
 void initSensors(){
+
 //
 //  Serial.print("Stop");
 //  for(int x = 0; x<100; x++){
@@ -381,6 +399,7 @@ void fileWriteSlowSensors(){
     dataFile.print(','); dataFile.print(pressure_mbar);
     dataFile.print(','); dataFile.print(depth);
     dataFile.print(','); dataFile.print(temperature);
+    dataFile.print(','); dataFile.print(spin);
     dataFile.print(','); dataFile.print(voltage);
 }
 
@@ -427,7 +446,7 @@ void fileInit()
     Serial.println(filename);
     delay(100);
    }
-   dataFile.println("accelX,accelY,accelZ,magX,magY,magZ,gyroX,gyroY,gyroZ,datetime,red,green,blue,mBar,depth,temperature,V");
+   dataFile.println("accelX,accelY,accelZ,magX,magY,magZ,gyroX,gyroY,gyroZ,date,red,green,blue,mBar,depth,temperature,spin,V");
    SdFile::dateTimeCallback(file_date_time);
    Serial.println(filename);
 }
@@ -462,6 +481,7 @@ void sampleSensors(void){
       calcPressTemp(); // MS58xx pressure and temperature
       fileWriteSlowSensors();
       ssCounter = 0;
+      spin = 0; //reset spin counter
       digitalWrite(LED_GRN, LOW);
     }
     
