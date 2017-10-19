@@ -217,16 +217,16 @@ void loop() {
     // resetWdt();
 
     
-//    if(t>=endTime){
-//      dataFile.close(); // close file
-//      if(recInt==0){  // no interval between files
-//        endTime += recDur;  // update end time
-//        fileInit();
-//        break;
-//      }
-//      mode = 0;
-//      break;
-//    }
+    if(t>=endTime){
+      dataFile.close(); // close file
+      if(recInt==0){  // no interval between files
+        endTime += recDur;  // update end time
+        fileInit();
+        break;
+      }
+      mode = 0;
+      break;
+    }
 
     // Check if stop button pressed
     if(digitalRead(BUTTON1)==0){
