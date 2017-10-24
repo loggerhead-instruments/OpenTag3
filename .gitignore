@@ -5,3 +5,5 @@ Altium/__Previews/*.*
 *.LOG
 *.PcbDocPreview
 *.PcbDocPreview
+*.drc
+*.html
