@@ -11,7 +11,6 @@
 
 
 /*
- *  pressure/temperature: test in water---not sure why formula in spec sheet seems to be wrong. Adjusted MS58xx_constant 163840.0
  *  WDT
  *  check if serial number unique
  *  
@@ -53,25 +52,15 @@ int recDur = 300;
 int recInt = 0;
 int LED_EN = 1; //enable green LEDs flash 1x per pressure read. Can be disabled from script.
 
-#define MS5837_30bar // Pressure sensor. Each sensor has different constants.
-//
-//
+#define MS5837_02bar // Pressure sensor. Each sensor has different constants.
 
-#ifdef MS5837_30bar
-  #define MS58xx_constant 163840.0
+#ifdef MS5837_02bar
+  #define MS58xx_constant 327680.0
   #define pressAddress 0x76
 #endif
-#ifdef MS5803_01bar
-  #define MS58xx_constant 32768.0
-  #define pressAddress 0x77
-#endif
-#ifdef MS5803_05bar
-  #define MS58xx_constant 32768.0
-  #define pressAddress 0x77
-#endif
-#ifdef MS5803_30bar
+#ifdef MS5837_30bar
   #define MS58xx_constant 8192.0
-  #define pressAddress 0x77
+  #define pressAddress 0x76
 #endif
 
 // pin assignments
@@ -317,7 +306,7 @@ void initSensors(){
 
   islInit();
   Serial.println("RGB");
-  for (int x=0; x<30; x++){
+  for (int x=0; x<20; x++){
     islRead();
     Serial.print(islRed); Serial.print("\t");
     Serial.print(islGreen); Serial.print("\t");
@@ -326,11 +315,11 @@ void initSensors(){
   }
   
   mpuInit(1);
-  for(int i=0; i<100; i++){
+  for(int i=0; i<30; i++){
       readImu();
       calcImu();
       printImu();
-      delay(200);
+      delay(100);
     }
 }
 

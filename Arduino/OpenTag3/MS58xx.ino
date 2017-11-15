@@ -1,5 +1,14 @@
 // TE 58xx Pressure Sensor
 
+#define POW2_6 64
+#define POW2_7 128
+#define POW2_8 256
+#define POW2_15 32768
+#define POW2_16 65536
+#define POW2_17 131072
+#define POW2_21 2097152
+#define POW2_23 8388608
+
 
 int pressInit()
 {
@@ -150,20 +159,21 @@ void calcPressTemp(){
   uint32_t D1 = (uint32_t)((((uint32_t)Pbuff[0]<<16) | ((uint32_t)Pbuff[1]<<8) | ((uint32_t) Pbuff[2])));
   uint32_t D2 = (uint32_t)((((uint32_t)Tbuff[0]<<16) | ((uint32_t)Tbuff[1]<<8) | ((uint32_t) Tbuff[2])));
   
-  float dT = (float) D2 - ((float) TREF * 256.0);
-  float T16 = 2000.0 + (dT * (float) TEMPSENS / (float) 8388608.0);
+  float dT = (float) D2 - ((float) TREF * POW2_8);
+  float T16 = 2000.0 + (dT * (float) TEMPSENS / (float) POW2_23);
+  temperature = T16 / 100.0;
 
   float OFF, SENS;
-  #ifdef MS58xx_05bar
-    OFF = ((float) POFF * 262144.0)  + (((float) TCOFF * dT) / 32.0);
-    SENS = ((float) PSENS * 131072.0) + ((dT * (float) TCSENS) / 128.0);
+  #ifdef MS5837_02bar
+    OFF = ((float) POFF * POW2_17)  + (((float) TCOFF * dT) / POW2_6);
+    SENS = ((float) PSENS * POW2_16) + ((dT * (float) TCSENS) / POW2_7);
   #else
-    OFF = ((float) POFF * 65536.0)  + (((float) TCOFF * dT) / 128.0);
-    SENS = ((float) PSENS * 32768.0) + ((dT * (float) TCSENS) / 256.0);
+    OFF = ((float) POFF * POW2_16)  + (((float) TCOFF * dT) / POW2_7);
+    SENS = ((float) PSENS * POW2_15) + ((dT * (float) TCSENS) / POW2_8);
   #endif
     
-  pressure_mbar = ((float) D1 * SENS / 2097152.0 - OFF) / MS58xx_constant / 10.0;  // mbar
-  float mbar_per_m = 1113.77;
+  pressure_mbar = (((float) D1 * SENS / POW2_21 ) - OFF) / MS58xx_constant / 10.0;  // mbar
+  float mbar_per_m = 111.377;
   depth = -(1010.0 -  pressure_mbar) / mbar_per_m;
   temperature = T16 / 100.0;
 }
