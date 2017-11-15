@@ -12,11 +12,7 @@
 
 /*
  *  WDT
- *  check if serial number unique
- *  
  *  check for errors on sensor init
- *  
- *  read impeller
  */
 
 
@@ -140,7 +136,6 @@ void setup() {
   pinMode(BUTTON1, INPUT_PULLUP);
   pinMode(BAT_VOLTAGE, INPUT);
   pinMode(HALL, INPUT);
-
   
   digitalWrite(BURN,LOW);
   digitalWrite(LED_RED,LOW);
@@ -261,12 +256,12 @@ void initSensors(){
 //    delay(100);
 //  }
 
-//// Battery Voltage
-//  for(int x = 0; x<100; x++){
-//    readVoltage();
-//    Serial.println(voltage);
-//    delay(100);
-//  }
+// Battery Voltage
+  for(int x = 0; x<10; x++){
+    readVoltage();
+    Serial.println(voltage);
+    delay(100);
+  }
 
   reset_alarm();
 //  Serial.println(rtcStatus());
