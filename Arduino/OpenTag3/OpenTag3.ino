@@ -239,10 +239,10 @@ void loop() {
 }
 
 
-//boolean ledState;
+boolean ledState;
 void spinCount(){
-  //ledState = !ledState;
-  //digitalWrite(LED_RED, ledState);
+  ledState = !ledState;
+  digitalWrite(LED_RED, ledState);
   spin++;
 
 }
