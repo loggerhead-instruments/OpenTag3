@@ -1,10 +1,11 @@
-Output: Generates pick and place files
-Type  : Pick Place
+Output: Simple BOM
+Type  : SimpleBOM
 From  : Variant [[No Variations]] of Project [OpenTag3.PrjPCB]
-   Generated File[Pick Place for OpenTag3.csv]
+   Generated File[OpenTag3.BOM]
+   Generated File[OpenTag3.CSV]
 
 
-Files Generated   : 1
+Files Generated   : 2
 Documents Printed : 0
 
-Finished Output Generation At 8:51:42 AM On 10/18/2017
+Finished Output Generation At 3:05:28 PM On 11/29/2017
