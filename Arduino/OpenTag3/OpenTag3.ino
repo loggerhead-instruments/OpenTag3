@@ -44,9 +44,11 @@ SoftWire Wire = SoftWire();
 float codeVer = 1.00;
 int printDiags = 1;
 
-int recDur = 300;
+int recDur = 3600; // 3600 seconds per hour
 int recInt = 0;
 int LED_EN = 1; //enable green LEDs flash 1x per pressure read. Can be disabled from script.
+
+#define HALL_EN 0
 
 #define MS5837_02bar // Pressure sensor. Each sensor has different constants.
 
@@ -160,11 +162,11 @@ void setup() {
   loadScript(); // do this early to set time
   initSensors();
   readRTC();
-  Serial.print(year); Serial.print(" ");
- Serial.print(month);Serial.print(" ");
+  Serial.print(year); Serial.print("-");
+ Serial.print(month);Serial.print("-");
  Serial.print(day);Serial.print(" ");
- Serial.print(hour);Serial.print(" ");
- Serial.print(minute);Serial.print(" ");
+ Serial.print(hour);Serial.print(":");
+ Serial.print(minute);Serial.print(":");
  Serial.print(second);
 
  logFileWrite();
@@ -242,7 +244,7 @@ void loop() {
 boolean ledState;
 void spinCount(){
   ledState = !ledState;
-  digitalWrite(LED_RED, ledState);
+  if(HALL_EN) digitalWrite(LED_RED, ledState);
   spin++;
 
 }
