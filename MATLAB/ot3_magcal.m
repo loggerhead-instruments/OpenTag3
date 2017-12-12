@@ -24,21 +24,29 @@ magoffset=(max(INER.mag(startmag:stopmag,:))+min(INER.mag(startmag:stopmag,:)))/
 figure(10)
 subplot(2,2,1)
 plot(INER.mag(startmag:stopmag,1:3:end),INER.mag(startmag:stopmag,2:3:end),'.');
+xlim([-1 1]);
+ylim([-1 1]);
 xlabel('X uncorrected');
 ylabel('Y uncorrected');
 
 subplot(2,2,2)
 plot(INER.mag(startmag:stopmag,1:3:end),INER.mag(startmag:stopmag,3:3:end),'.');
+xlim([-1 1]);
+ylim([-1 1]);
 xlabel('X uncorrected');
 ylabel('Z uncorrected');
 
 subplot(2,2,3)
 plot(INER.mag(startmag:stopmag,1:3:end)-magoffset(1),INER.mag(startmag:stopmag,2:3:end)-magoffset(2),'.');
+xlim([-1 1]);
+ylim([-1 1]);
 xlabel('X corrected');
 ylabel('Y corrected');
 
 subplot(2,2,4)
 plot(INER.mag(startmag:stopmag,1:3:end)-magoffset(1),INER.mag(startmag:stopmag,3:3:end)-magoffset(3),'.');
+xlim([-1 1]);
+ylim([-1 1]);
 xlabel('X corrected');
 ylabel('Z corrected');
 
