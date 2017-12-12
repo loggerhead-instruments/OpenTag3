@@ -9,7 +9,7 @@
 
 % Typical offsets may look like: [0.3156   -0.1651   -0.3899]
 
-ot_load;  % load data file
+ot3_load;  % load data file
 
 %% Limit range of data anlaysis (if changes when device picked up)
 startgyro=floor(0.2*length(INER.gyro));
