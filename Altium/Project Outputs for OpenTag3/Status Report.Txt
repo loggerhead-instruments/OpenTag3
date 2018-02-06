@@ -1,11 +1,9 @@
-Output: Simple BOM
-Type  : SimpleBOM
+Output: Bill of Materials
+Type  : BOM
 From  : Variant [[No Variations]] of Project [OpenTag3.PrjPCB]
-   Generated File[OpenTag3.BOM]
-   Generated File[OpenTag3.CSV]
 
 
-Files Generated   : 2
+Files Generated   : 0
 Documents Printed : 0
 
-Finished Output Generation At 3:05:28 PM On 11/29/2017
+Finished Output Generation At 11:55:14 AM On 2/6/2018
