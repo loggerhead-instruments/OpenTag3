@@ -10,3 +10,4 @@ Altium/__Previews/*.*
 *.drc
 *.html
 *.OutJob
+*.SchDocPreview

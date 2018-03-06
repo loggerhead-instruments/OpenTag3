@@ -44,11 +44,11 @@ SoftWire Wire = SoftWire();
 float codeVer = 1.00;
 int printDiags = 1;
 
-int recDur = 3600; // 3600 seconds per hour
+int recDur = 600; // 3600 seconds per hour
 int recInt = 0;
 int LED_EN = 1; //enable green LEDs flash 1x per pressure read. Can be disabled from script.
 
-#define HALL_EN 0
+#define HALL_EN 0 //flash red LED for Hall sensor
 
 #define MS5837_02bar // Pressure sensor. Each sensor has different constants.
 
@@ -70,6 +70,8 @@ int LED_EN = 1; //enable green LEDs flash 1x per pressure read. Can be disabled 
 #define BUTTON1 A2 // PC2
 #define BAT_VOLTAGE A7// ADC7
 #define HALL 3 // PD3 (INT1)
+#define CAM_TRIG 5 
+#define CAM_EN 6
 
 // SD file system
 SdFat sd;
@@ -138,12 +140,16 @@ void setup() {
   pinMode(BUTTON1, INPUT_PULLUP);
   pinMode(BAT_VOLTAGE, INPUT);
   pinMode(HALL, INPUT);
+  pinMode(CAM_TRIG, OUTPUT);
+  pinMode(CAM_EN, OUTPUT);
   
   digitalWrite(BURN,LOW);
   digitalWrite(LED_RED,LOW);
   digitalWrite(LED_GRN,HIGH);
   digitalWrite(VHFPOW, LOW);
   digitalWrite(BURN, LOW);
+  digitalWrite(CAM_TRIG, HIGH);
+  digitalWrite(CAM_EN, LOW);
   pinMode(2, INPUT); //Arduino Interrupt2
   pinMode(3, INPUT); //Arduino Interrupt1
 
@@ -201,6 +207,7 @@ void loop() {
       fileInit();
       updateTemp();  // get first reading ready
       mode = 1;
+      camStart();
       startInterruptTimer(speriod, clockprescaler);
       attachInterrupt(digitalPinToInterrupt(HALL), spinCount, RISING);
     }
@@ -226,6 +233,7 @@ void loop() {
     if(digitalRead(BUTTON1)==0){
       delay(10); // simple deBounce
       if(digitalRead(BUTTON1)==0){
+        camStop();
         stopTimer();
         digitalWrite(LED_RED, HIGH);
         dataFile.close();
@@ -510,5 +518,17 @@ void startInterruptTimer(int speriod, byte clockprescaler){
 
 void stopTimer(){
     MsTimer2::stop();
+}
+
+void camStart(){
+    digitalWrite(CAM_TRIG, LOW);
+    delay(500);
+    digitalWrite(CAM_TRIG, HIGH);
+}
+
+void camStop(){
+    digitalWrite(CAM_TRIG, LOW);
+    delay(500);
+    digitalWrite(CAM_TRIG, HIGH);
 }
 
