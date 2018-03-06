@@ -41,7 +41,7 @@ SoftWire Wire = SoftWire();
 //
 // DEV SETTINGS
 //
-float codeVer = 1.00;
+char codeVer[12] = "2018-03-06";
 int printDiags = 1;
 
 int recDur = 600; // 3600 seconds per hour
@@ -220,13 +220,12 @@ void loop() {
     // check if time to close
     if(t>=endTime){
       dataFile.close(); // close file
+      mode = 0;
       if(recInt==0){  // no interval between files
         endTime += recDur;  // update end time
         fileInit();
-        break;
+        mode = 1;
       }
-      mode = 0;
-      break;
     }
 
     // Check if stop button pressed
