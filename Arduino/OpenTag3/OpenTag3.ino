@@ -221,12 +221,13 @@ void loop() {
     if(t>=endTime){
       stopTimer();
       dataFile.close(); // close file
-      mode = 0;
       if(recInt==0){  // no interval between files
         endTime += recDur;  // update end time
         fileInit();
         startInterruptTimer(speriod, clockprescaler);
-        mode = 1;
+      }
+      else{
+        mode = 0;
       }
     }
 
