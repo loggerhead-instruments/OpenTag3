@@ -41,7 +41,7 @@ SoftWire Wire = SoftWire();
 //
 // DEV SETTINGS
 //
-char codeVer[12] = "2018-03-06";
+char codeVer[12] = "2018-03-12";
 int printDiags = 1;
 
 int recDur = 600; // 3600 seconds per hour
@@ -138,7 +138,6 @@ void setup() {
   pinMode(BURN, OUTPUT);
   pinMode(VHFPOW, OUTPUT);
   pinMode(BUTTON1, INPUT_PULLUP);
-  pinMode(BAT_VOLTAGE, INPUT);
   pinMode(HALL, INPUT);
   pinMode(CAM_TRIG, OUTPUT);
   pinMode(CAM_EN, OUTPUT);
@@ -475,6 +474,7 @@ void sampleSensors(void){
       checkVHF();
       checkBurn();
       calcPressTemp(); // MS58xx pressure and temperature
+      readVoltage();
       fileWriteSlowSensors();
       ssCounter = 0;
       spin = 0; //reset spin counter
