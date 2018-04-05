@@ -41,10 +41,10 @@ SoftWire Wire = SoftWire();
 //
 // DEV SETTINGS
 //
-char codeVer[12] = "2018-04-04";
+char codeVer[12] = "2018-04-05";
 int printDiags = 1;
 
-int recDur = 600; // 3600 seconds per hour
+int recDur = 3600; // 3600 seconds per hour
 int recInt = 0;
 int LED_EN = 1; //enable green LEDs flash 1x per pressure read. Can be disabled from script.
 
@@ -168,11 +168,11 @@ void setup() {
   initSensors();
   readRTC();
   Serial.print(year); Serial.print("-");
- Serial.print(month);Serial.print("-");
- Serial.print(day);Serial.print(" ");
- Serial.print(hour);Serial.print(":");
- Serial.print(minute);Serial.print(":");
- Serial.print(second);
+  Serial.print(month);Serial.print("-");
+  Serial.print(day);Serial.print(" ");
+  Serial.print(hour);Serial.print(":");
+  Serial.print(minute);Serial.print(":");
+  Serial.print(second);
 
  logFileWrite();
   
@@ -181,7 +181,7 @@ void setup() {
     Serial.print("Burn time set");
     Serial.println(burnTime);
   }
-  if(startTime==0) startTime = t + 0; 
+  if(startTime==0) startTime = t + 5; // give some time for camera to power on
   Serial.print("Time:"); Serial.println(t);
   Serial.print("Start Time:"); Serial.println(startTime);
   digitalWrite(LED_GRN, LOW);
@@ -198,6 +198,7 @@ void loop() {
     // resetWdt();
     readRTC();
     checkBurn();
+    checkVHF();
     Serial.print(t); Serial.print(" "); Serial.println(startTime);
     delay(1000);
     if(t >= startTime){
@@ -215,9 +216,6 @@ void loop() {
 
   while(mode==1){
     // resetWdt();
-    readRTC();
-    checkVHF();
-    checkBurn();
     
     // check if time to close
     if(t>=endTime){
@@ -257,23 +255,23 @@ void loop() {
         camStop();
         stopTimer();
         dataFile.close();
-
         // go into low power mode
         mpuInit(0); // sleep IMU
         islSleep(); // sleep light sensor
         setClockPrescaler(3); // run at 1 MHz
-
         delay(1000);
         camPowOff();
-
         digitalWrite(VHFPOW, HIGH); // turn on VHF
         digitalWrite(BURN, HIGH);   // burn
-
-        // check for burn and VHF
         while(1){
+          digitalWrite(LED_RED, HIGH);
+          delay(100);
+          digitalWrite(LED_RED, LOW);
+          delay(10000);
         }
       }
     }
+    
   } // mode = 1
   
 }
@@ -311,10 +309,8 @@ void initSensors(){
 //    delay(1000);
 //  }
   // flash LED with current hour
-  digitalWrite(LED_RED, HIGH);
-  digitalWrite(LED_GRN, LOW);
-  delay(1000);
   readRTC();
+  digitalWrite(LED_RED, HIGH);
   for(int i=0; i<hour; i++){
     delay(300);
     digitalWrite(LED_GRN, HIGH);
@@ -337,7 +333,6 @@ void initSensors(){
     Serial.print(" depth:"); Serial.print(depth);
     Serial.print(" temp:"); Serial.println(temperature);
   }
-
 
   islInit();
   Serial.println("RGB");
@@ -464,12 +459,14 @@ void fileInit()
    sprintf(filename,"%02d%02d%02dT%02d%02d%02d.csv", year, month, day, hour, minute, second);  //filename is DDHHMM
    dataFile = sd.open(filename, O_WRITE | O_CREAT | O_APPEND);
    while (!dataFile){
+    digitalWrite(LED_RED, HIGH);
     fileCount += 1;
-    sprintf(filename,"F%06d.amx",fileCount); //if can't open just use count
+    sprintf(filename,"F%06d.txt",fileCount); //if can't open just use count
     dataFile = sd.open(filename, O_WRITE | O_CREAT | O_EXCL);
     Serial.println(filename);
     delay(100);
    }
+   digitalWrite(LED_RED, LOW);
    dataFile.println("accelX,accelY,accelZ,magX,magY,magZ,gyroX,gyroY,gyroZ,date,red,green,blue,mBar,depth,temperature,spin,V");
    SdFile::dateTimeCallback(file_date_time);
    Serial.println(filename);
@@ -500,6 +497,8 @@ void sampleSensors(void){
       if(LED_EN) digitalWrite(LED_GRN, HIGH);
       islRead(); // RGB in between to give temperature time to convert
       readRTC();
+      checkVHF();
+      checkBurn();
       calcPressTemp(); // MS58xx pressure and temperature
       readVoltage();
       fileWriteSlowSensors();
