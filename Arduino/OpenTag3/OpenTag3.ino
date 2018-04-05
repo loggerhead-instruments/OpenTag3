@@ -41,7 +41,7 @@ SoftWire Wire = SoftWire();
 //
 // DEV SETTINGS
 //
-char codeVer[12] = "2018-03-12";
+char codeVer[12] = "2018-04-04";
 int printDiags = 1;
 
 int recDur = 600; // 3600 seconds per hour
@@ -50,7 +50,7 @@ int LED_EN = 1; //enable green LEDs flash 1x per pressure read. Can be disabled 
 
 #define HALL_EN 0 //flash red LED for Hall sensor
 
-#define MS5837_02bar // Pressure sensor. Each sensor has different constants.
+#define MS5837_30bar // Pressure sensor. Each sensor has different constants.
 
 #ifdef MS5837_02bar
   #define MS58xx_constant 327680.0
@@ -71,7 +71,7 @@ int LED_EN = 1; //enable green LEDs flash 1x per pressure read. Can be disabled 
 #define BAT_VOLTAGE A7// ADC7
 #define HALL 3 // PD3 (INT1)
 #define CAM_TRIG 5 
-#define CAM_EN 6
+#define CAM_EN 6  // High enables 5V power boost board
 
 // SD file system
 SdFat sd;
@@ -148,7 +148,7 @@ void setup() {
   digitalWrite(VHFPOW, LOW);
   digitalWrite(BURN, LOW);
   digitalWrite(CAM_TRIG, HIGH);
-  digitalWrite(CAM_EN, LOW);
+  digitalWrite(CAM_EN, HIGH);
   pinMode(2, INPUT); //Arduino Interrupt2
   pinMode(3, INPUT); //Arduino Interrupt1
 
@@ -215,11 +215,15 @@ void loop() {
 
   while(mode==1){
     // resetWdt();
-
+    readRTC();
+    checkVHF();
+    checkBurn();
+    
     // check if time to close
     if(t>=endTime){
       stopTimer();
       dataFile.close(); // close file
+      LED_EN = 0; // disable green LED flashing after first file
       if(recInt==0){  // no interval between files
         endTime += recDur;  // update end time
         fileInit();
@@ -243,6 +247,31 @@ void loop() {
         startInterruptTimer(speriod, clockprescaler);
         fileInit();
         digitalWrite(LED_RED, LOW);
+      }
+    }
+
+    // Check if voltage is low
+    if(voltage < 3.3){
+      readVoltage(); // check again to be sure
+      if(voltage < 3.3){
+        camStop();
+        stopTimer();
+        dataFile.close();
+
+        // go into low power mode
+        mpuInit(0); // sleep IMU
+        islSleep(); // sleep light sensor
+        setClockPrescaler(3); // run at 1 MHz
+
+        delay(1000);
+        camPowOff();
+
+        digitalWrite(VHFPOW, HIGH); // turn on VHF
+        digitalWrite(BURN, HIGH);   // burn
+
+        // check for burn and VHF
+        while(1){
+        }
       }
     }
   } // mode = 1
@@ -471,8 +500,6 @@ void sampleSensors(void){
       if(LED_EN) digitalWrite(LED_GRN, HIGH);
       islRead(); // RGB in between to give temperature time to convert
       readRTC();
-      checkVHF();
-      checkBurn();
       calcPressTemp(); // MS58xx pressure and temperature
       readVoltage();
       fileWriteSlowSensors();
@@ -532,5 +559,13 @@ void camStop(){
     digitalWrite(CAM_TRIG, LOW);
     delay(500);
     digitalWrite(CAM_TRIG, HIGH);
+}
+
+void camPowOff(){
+  digitalWrite(CAM_EN, LOW);
+}
+
+void camPowOn(){
+  digitalWrite(CAM_EN, HIGH);
 }
 
