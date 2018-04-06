@@ -41,7 +41,7 @@ SoftWire Wire = SoftWire();
 //
 // DEV SETTINGS
 //
-char codeVer[12] = "2018-04-05";
+char codeVer[12] = "2018-04-06";
 int printDiags = 1;
 
 int recDur = 3600; // 3600 seconds per hour
@@ -181,16 +181,15 @@ void setup() {
     Serial.print("Burn time set");
     Serial.println(burnTime);
   }
-  if(startTime==0) startTime = t + 5; // give some time for camera to power on
+
+  if(startTime==0) startTime = t + 10; // give some time for camera to power on
   Serial.print("Time:"); Serial.println(t);
   Serial.print("Start Time:"); Serial.println(startTime);
   digitalWrite(LED_GRN, LOW);
   digitalWrite(LED_RED, LOW);
 
   setClockPrescaler(clockprescaler); // set clockprescaler from script file
-
   //setupWDT(11); // initialize and activate WDT with maximum period (~500 ms)
-
 }
 
 void loop() {
@@ -201,6 +200,11 @@ void loop() {
     checkVHF();
     Serial.print(t); Serial.print(" "); Serial.println(startTime);
     delay(1000);
+    digitalWrite(LED_GRN, HIGH);
+    digitalWrite(LED_RED, HIGH);
+    delay(10);
+    digitalWrite(LED_GRN, LOW);
+    digitalWrite(LED_RED, LOW);
     if(t >= startTime){
       endTime = startTime + recDur;
       startTime += recDur + recInt;  // this will be next start time for interval record
@@ -222,6 +226,7 @@ void loop() {
       stopTimer();
       dataFile.close(); // close file
       LED_EN = 0; // disable green LED flashing after first file
+      
       if(recInt==0){  // no interval between files
         endTime += recDur;  // update end time
         fileInit();
@@ -265,9 +270,9 @@ void loop() {
         digitalWrite(BURN, HIGH);   // burn
         while(1){
           digitalWrite(LED_RED, HIGH);
-          delay(100);
+          delay(10);
           digitalWrite(LED_RED, LOW);
-          delay(10000);
+          delay(2000);
         }
       }
     }
@@ -298,7 +303,7 @@ void initSensors(){
   for(int x = 0; x<10; x++){
     readVoltage();
     Serial.println(voltage);
-    delay(100);
+    delay(10);
   }
 
   reset_alarm();
@@ -311,13 +316,16 @@ void initSensors(){
   // flash LED with current hour
   readRTC();
   digitalWrite(LED_RED, HIGH);
+  delay(1000);
   for(int i=0; i<hour; i++){
     delay(300);
     digitalWrite(LED_GRN, HIGH);
     delay(100);
     digitalWrite(LED_GRN, LOW);
   }
+  delay(1000);
   digitalWrite(LED_RED, LOW);
+
 
   // Pressure/Temperature
   pressInit();
@@ -333,7 +341,7 @@ void initSensors(){
     Serial.print(" depth:"); Serial.print(depth);
     Serial.print(" temp:"); Serial.println(temperature);
   }
-
+  digitalWrite(LED_GRN, HIGH);
   islInit();
   Serial.println("RGB");
   for (int x=0; x<20; x++){
