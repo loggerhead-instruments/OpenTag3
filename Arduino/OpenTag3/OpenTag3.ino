@@ -41,14 +41,14 @@ SoftWire Wire = SoftWire();
 //
 // DEV SETTINGS
 //
-char codeVer[12] = "2018-04-06";
+char codeVer[12] = "2018-04-19";
 int printDiags = 1;
 
 int recDur = 3600; // 3600 seconds per hour
 int recInt = 0;
 int LED_EN = 1; //enable green LEDs flash 1x per pressure read. Can be disabled from script.
 
-#define HALL_EN 0 //flash red LED for Hall sensor
+boolean HALL_EN = 0; //flash red LED for Hall sensor
 
 #define MS5837_30bar // Pressure sensor. Each sensor has different constants.
 
