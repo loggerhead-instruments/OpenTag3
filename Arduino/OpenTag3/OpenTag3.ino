@@ -136,7 +136,7 @@ void setup() {
   
   digitalWrite(BURN,LOW);
   digitalWrite(LED_RED,LOW);
-  digitalWrite(LED_GRN,LOW);
+  digitalWrite(LED_GRN,HIGH);
   digitalWrite(VHFPOW, LOW);
   digitalWrite(BURN, LOW);
   digitalWrite(CAM_TRIG, HIGH);
@@ -150,7 +150,8 @@ void setup() {
   Serial.println("microSD");
   // see if the card is present and can be initialized:
   while (!sd.begin(chipSelect, SPI_FULL_SPEED)) {
-    Serial.println("faile");
+    Serial.println("fail");
+    digitalWrite(LED_GRN,LOW);
     digitalWrite(LED_RED, HIGH);
     delay(200);
     digitalWrite(LED_RED, LOW);
