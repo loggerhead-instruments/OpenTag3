@@ -164,13 +164,14 @@ void calcPressTemp(){
   temperature = T16 / 100.0;
 
   float OFF, SENS;
-  #ifdef MS5837_02bar
+  if(MS58xx_constant==327680.0){
     OFF = ((float) POFF * POW2_17)  + (((float) TCOFF * dT) / POW2_6);
     SENS = ((float) PSENS * POW2_16) + ((dT * (float) TCSENS) / POW2_7);
-  #else
+  }
+  else{
     OFF = ((float) POFF * POW2_16)  + (((float) TCOFF * dT) / POW2_7);
     SENS = ((float) PSENS * POW2_15) + ((dT * (float) TCSENS) / POW2_8);
-  #endif
+  }
     
   pressure_mbar = (((float) D1 * SENS / POW2_21 ) - OFF) / MS58xx_constant / 10.0;  // mbar
   float mbar_per_m = 111.377;

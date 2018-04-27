@@ -49,16 +49,9 @@ int LED_EN = 1; //enable green LEDs flash 1x per pressure read. Can be disabled 
 
 boolean HALL_EN = 0; //flash red LED for Hall sensor
 
-#define MS5837_30bar // Pressure sensor. Each sensor has different constants.
-
-#ifdef MS5837_02bar
-  #define MS58xx_constant 327680.0
-  #define pressAddress 0x76
-#endif
-#ifdef MS5837_30bar
-  #define MS58xx_constant 8192.0
-  #define pressAddress 0x76
-#endif
+#define pressAddress 0x76
+float MS58xx_constant = 8192.0; // for 30 bar sensor
+// float MS58xx_constant = 327680.0; // for 2 bar sensor; will switch to this if 30 bar fails to give good depth
 
 // pin assignments
 #define chipSelect  10
@@ -143,7 +136,7 @@ void setup() {
   
   digitalWrite(BURN,LOW);
   digitalWrite(LED_RED,LOW);
-  digitalWrite(LED_GRN,HIGH);
+  digitalWrite(LED_GRN,LOW);
   digitalWrite(VHFPOW, LOW);
   digitalWrite(BURN, LOW);
   digitalWrite(CAM_TRIG, HIGH);
@@ -325,6 +318,7 @@ void initSensors(){
   if (pressInit()==0){
     showFail(200); // pressure sensor fail
   }
+  Serial.println("P D T");
   for(int x=0; x<5; x++){
     updatePress();
     delay(100);
@@ -333,9 +327,18 @@ void initSensors(){
     delay(100);
     readTemp();
     calcPressTemp();
-    Serial.print(" press:"); Serial.print(pressure_mbar);
-    Serial.print(" depth:"); Serial.print(depth);
-    Serial.print(" temp:"); Serial.println(temperature);
+    Serial.print(pressure_mbar); Serial.print(" ");
+    Serial.print(depth); Serial.print(" ");
+    Serial.println(temperature);
+  }
+
+  if(depth<-1.0 | depth>1.0){
+    // out of range, try settings for 2 bar sensor
+    MS58xx_constant = 327680.0;
+    calcPressTemp();
+    Serial.print(pressure_mbar); Serial.print(" ");
+    Serial.print(depth); Serial.print(" ");
+    Serial.println(temperature);
   }
 
   if (islInit()==0) showFail(200);
@@ -465,6 +468,8 @@ void logFileWrite()
    for (uint8_t i = 14; i < 24; i += 1) {
        logFile.print(boot_signature_byte_get(i), HEX);
    }
+   logFile.print("Press:");
+   logFile.println(MS58xx_constant);
    logFile.println();
    logFile.print(year);  logFile.print("-");
    logFile.print(month); logFile.print("-");
