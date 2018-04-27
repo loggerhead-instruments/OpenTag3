@@ -174,7 +174,7 @@ boolean loadScript()
   }
   else
   {   
-    Serial.println("setup.txt not opened");
+    Serial.println("no setup");
 
    // // display.println("no setup file");
     return 0;

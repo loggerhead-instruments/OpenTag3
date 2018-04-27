@@ -40,7 +40,6 @@ int GyroAddress = 0x69;
 int mpuInit(boolean mode)
 {
   int ecode;
-   if (printDiags) Serial.print("MPU Init\n");
    if(mode==0)
   {
      ecode = I2Cwrite(GyroAddress, 0x6B, 0x40);  //Sleep mode, internal 8 MHz oscillator  //another mode is cycle where it wakes up periodically to take a value

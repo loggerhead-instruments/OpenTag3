@@ -1,4 +1,4 @@
-// Copyright Loggerhead Instruments, 2017
+// Copyright Loggerhead Instruments, 2017, 2018
 // David Mann
 
 // OpenTag3 is an underwater motion datalogger
@@ -14,7 +14,6 @@
  *  WDT
  *  check for errors on sensor init
  */
-
 
 //#include <Wire.h>
 #include <SPI.h>
@@ -41,7 +40,7 @@ SoftWire Wire = SoftWire();
 //
 // DEV SETTINGS
 //
-char codeVer[12] = "2018-04-19";
+char codeVer[12] = "2018-04-27";
 int printDiags = 1;
 
 int recDur = 3600; // 3600 seconds per hour
@@ -155,10 +154,10 @@ void setup() {
   Serial.println("OT3");
   Wire.begin();
   
-  Serial.println("Init microSD");
+  Serial.println("microSD");
   // see if the card is present and can be initialized:
   while (!sd.begin(chipSelect, SPI_FULL_SPEED)) {
-    Serial.println("Card failed");
+    Serial.println("faile");
     digitalWrite(LED_RED, HIGH);
     delay(200);
     digitalWrite(LED_RED, LOW);
@@ -172,13 +171,13 @@ void setup() {
   Serial.print(day);Serial.print(" ");
   Serial.print(hour);Serial.print(":");
   Serial.print(minute);Serial.print(":");
-  Serial.print(second);
+  Serial.println(second);
 
  logFileWrite();
   
   if(burnFlag==2){
     burnTime = t + burnSeconds;
-    Serial.print("Burn time set");
+    Serial.print("Burn set");
     Serial.println(burnTime);
   }
 
@@ -276,9 +275,7 @@ void loop() {
         }
       }
     }
-    
   } // mode = 1
-  
 }
 
 
@@ -287,32 +284,26 @@ void spinCount(){
   ledState = !ledState;
   if(HALL_EN) digitalWrite(LED_RED, ledState);
   spin++;
-
 }
 
 void initSensors(){
 
-//
-//  Serial.print("Stop");
-//  for(int x = 0; x<100; x++){
-//    Serial.println(digitalRead(BUTTON1));
-//    delay(100);
-//  }
-
+  digitalWrite(VHFPOW, HIGH);
+  digitalWrite(BURN, HIGH);
+  
 // Battery Voltage
-  for(int x = 0; x<10; x++){
-    readVoltage();
-    Serial.println(voltage);
-    delay(10);
+  readVoltage();
+  Serial.print(voltage);
+  Serial.println(" V");
+  if(voltage < 3.5){
+    showFail(50); //battery voltage read fail
   }
-
+  
   reset_alarm();
-//  Serial.println(rtcStatus());
-//  for(int i=0; i<10; i++){
-//    readRTC();
-//    Serial.println(second);
-//    delay(1000);
-//  }
+
+  readRTC();
+  int oldSecond = second;
+
   // flash LED with current hour
   readRTC();
   digitalWrite(LED_RED, HIGH);
@@ -320,16 +311,21 @@ void initSensors(){
   for(int i=0; i<hour; i++){
     delay(300);
     digitalWrite(LED_GRN, HIGH);
-    delay(100);
+    delay(80);
     digitalWrite(LED_GRN, LOW);
   }
-  delay(1000);
+  delay(400);
   digitalWrite(LED_RED, LOW);
-
+  readRTC();
+  if(second==oldSecond){
+    showFail(100); // clock not ticking
+  }
 
   // Pressure/Temperature
-  pressInit();
-  for(int x=0; x<10; x++){
+  if (pressInit()==0){
+    showFail(200); // pressure sensor fail
+  }
+  for(int x=0; x<5; x++){
     updatePress();
     delay(100);
     readPress();
@@ -341,53 +337,82 @@ void initSensors(){
     Serial.print(" depth:"); Serial.print(depth);
     Serial.print(" temp:"); Serial.println(temperature);
   }
-  digitalWrite(LED_GRN, HIGH);
-  islInit();
+
+  if (islInit()==0) showFail(200);
+  
   Serial.println("RGB");
-  for (int x=0; x<20; x++){
+  for (int x=0; x<8; x++){
     islRead();
     Serial.print(islRed); Serial.print("\t");
     Serial.print(islGreen); Serial.print("\t");
     Serial.println(islBlue);
     delay(100);
   }
-  
-  mpuInit(1);
-  for(int i=0; i<30; i++){
+
+  Serial.print("MPU");
+  int eCode = mpuInit(1);
+  if(eCode!=0) {
+    Serial.println(eCode);
+    showFail(300);
+  }
+  for(int i=0; i<10; i++){
       readImu();
       calcImu();
       printImu();
       delay(100);
+  }
+
+  // sensor out of spec warning
+  if(depth<-1.0 | depth>1.0 | islRed==0 | accelX==-1 | magX==-1 | gyroX==-1) {
+    for(int i=0; i<300; i++){ //flash fast for  seconds
+      digitalWrite(LED_RED, HIGH);
+      delay(20);
+      digitalWrite(LED_RED, LOW);
+      delay(30);
     }
+  }
+  
+  digitalWrite(VHFPOW, LOW);
+  digitalWrite(BURN, LOW);
+}
+
+void showFail(int blinkInterval){
+  digitalWrite(LED_GRN, LOW);
+  while(1){
+    digitalWrite(LED_RED, HIGH);
+    delay(blinkInterval);
+    digitalWrite(LED_RED, LOW);
+    delay(blinkInterval);
+  }
 }
 
 void calcImu(){
-      accelX = (int16_t) ((int16_t)imuTempBuffer[0] << 8 | imuTempBuffer[1]);    
-      accelY = (int16_t) ((int16_t)imuTempBuffer[2] << 8 | imuTempBuffer[3]);   
-      accelZ = (int16_t) ((int16_t)imuTempBuffer[4] << 8 | imuTempBuffer[5]);    
-      
-     // gyroTemp = (int16_t) (((int16_t)imuTempBuffer[6]) << 8 | imuTempBuffer[7]);   
-     
-      gyroX = (int16_t)  (((int16_t)imuTempBuffer[8] << 8) | imuTempBuffer[9]);   
-      gyroY = (int16_t)  (((int16_t)imuTempBuffer[10] << 8) | imuTempBuffer[11]); 
-      gyroZ = (int16_t)  (((int16_t)imuTempBuffer[12] << 8) | imuTempBuffer[13]);   
-      
-      magX = (int16_t)  (((int16_t)imuTempBuffer[14] << 8) | imuTempBuffer[15]);   
-      magY = (int16_t)  (((int16_t)imuTempBuffer[16] << 8) | imuTempBuffer[17]);   
-      magZ = (int16_t)  (((int16_t)imuTempBuffer[18] << 8) | imuTempBuffer[19]);  
+  accelX = (int16_t) ((int16_t)imuTempBuffer[0] << 8 | imuTempBuffer[1]);    
+  accelY = (int16_t) ((int16_t)imuTempBuffer[2] << 8 | imuTempBuffer[3]);   
+  accelZ = (int16_t) ((int16_t)imuTempBuffer[4] << 8 | imuTempBuffer[5]);    
+  
+ // gyroTemp = (int16_t) (((int16_t)imuTempBuffer[6]) << 8 | imuTempBuffer[7]);   
+ 
+  gyroX = (int16_t)  (((int16_t)imuTempBuffer[8] << 8) | imuTempBuffer[9]);   
+  gyroY = (int16_t)  (((int16_t)imuTempBuffer[10] << 8) | imuTempBuffer[11]); 
+  gyroZ = (int16_t)  (((int16_t)imuTempBuffer[12] << 8) | imuTempBuffer[13]);   
+  
+  magX = (int16_t)  (((int16_t)imuTempBuffer[14] << 8) | imuTempBuffer[15]);   
+  magY = (int16_t)  (((int16_t)imuTempBuffer[16] << 8) | imuTempBuffer[17]);   
+  magZ = (int16_t)  (((int16_t)imuTempBuffer[18] << 8) | imuTempBuffer[19]);  
 }
 
 void printImu(){
-      Serial.print("a/m/g:\t");
-      Serial.print(accelX); Serial.print("\t");
-      Serial.print(accelY); Serial.print("\t");
-      Serial.print(accelZ); Serial.print("\t");
-      Serial.print(magX); Serial.print("\t");
-      Serial.print(magY); Serial.print("\t");
-      Serial.print(magZ); Serial.print("\t");
-      Serial.print(gyroX); Serial.print("\t");
-      Serial.print(gyroY); Serial.print("\t");
-      Serial.println(gyroZ);
+  Serial.print("a/m/g:\t");
+  Serial.print(accelX); Serial.print("\t");
+  Serial.print(accelY); Serial.print("\t");
+  Serial.print(accelZ); Serial.print("\t");
+  Serial.print(magX); Serial.print("\t");
+  Serial.print(magY); Serial.print("\t");
+  Serial.print(magZ); Serial.print("\t");
+  Serial.print(gyroX); Serial.print("\t");
+  Serial.print(gyroY); Serial.print("\t");
+  Serial.println(gyroZ);
 }
 
 void fileWriteImu(){
@@ -403,31 +428,31 @@ void fileWriteImu(){
 }
 
 void fileWriteSlowSensors(){
-   dataFile.print(','); dataFile.print(year);  
-    dataFile.print('-');
-    if(month < 10) dataFile.print('0');
-    dataFile.print(month);
-    dataFile.print('-');
-    if(day < 10) dataFile.print('0');
-    dataFile.print(day);
-    dataFile.print('T');
-    if(hour) dataFile.print('0');
-    dataFile.print(hour);
-    dataFile.print(':');
-   if(minute < 10) dataFile.print('0');
-   dataFile.print(minute);
-   dataFile.print(':');
-   if(second < 10) dataFile.print('0');
-   dataFile.print(second);
-   dataFile.print("Z,");
-    dataFile.print(islRed);
-    dataFile.print(','); dataFile.print(islGreen);
-    dataFile.print(','); dataFile.print(islBlue);
-    dataFile.print(','); dataFile.print(pressure_mbar);
-    dataFile.print(','); dataFile.print(depth);
-    dataFile.print(','); dataFile.print(temperature);
-    dataFile.print(','); dataFile.print(spin);
-    dataFile.print(','); dataFile.print(voltage);
+  dataFile.print(','); dataFile.print(year);  
+  dataFile.print('-');
+  if(month < 10) dataFile.print('0');
+  dataFile.print(month);
+  dataFile.print('-');
+  if(day < 10) dataFile.print('0');
+  dataFile.print(day);
+  dataFile.print('T');
+  if(hour) dataFile.print('0');
+  dataFile.print(hour);
+  dataFile.print(':');
+  if(minute < 10) dataFile.print('0');
+  dataFile.print(minute);
+  dataFile.print(':');
+  if(second < 10) dataFile.print('0');
+  dataFile.print(second);
+  dataFile.print("Z,");
+  dataFile.print(islRed);
+  dataFile.print(','); dataFile.print(islGreen);
+  dataFile.print(','); dataFile.print(islBlue);
+  dataFile.print(','); dataFile.print(pressure_mbar);
+  dataFile.print(','); dataFile.print(depth);
+  dataFile.print(','); dataFile.print(temperature);
+  dataFile.print(','); dataFile.print(spin);
+  dataFile.print(','); dataFile.print(voltage);
 }
 
 void logFileWrite()
@@ -496,24 +521,24 @@ void sampleSensors(void){
     togglePress = 0;
   }
     
-    if(ssCounter>=slowRateMultiple){
-      // MS58xx pressure and temperature
-      readTemp();
-      updatePress();  
-      togglePress = 1;
-      
-      if(LED_EN) digitalWrite(LED_GRN, HIGH);
-      islRead(); // RGB in between to give temperature time to convert
-      readRTC();
-      checkVHF();
-      checkBurn();
-      calcPressTemp(); // MS58xx pressure and temperature
-      readVoltage();
-      fileWriteSlowSensors();
-      ssCounter = 0;
-      spin = 0; //reset spin counter
-      digitalWrite(LED_GRN, LOW);
-    }
+  if(ssCounter>=slowRateMultiple){
+    // MS58xx pressure and temperature
+    readTemp();
+    updatePress();  
+    togglePress = 1;
+    
+    if(LED_EN) digitalWrite(LED_GRN, HIGH);
+    islRead(); // RGB in between to give temperature time to convert
+    readRTC();
+    checkVHF();
+    checkBurn();
+    calcPressTemp(); // MS58xx pressure and temperature
+    readVoltage();
+    fileWriteSlowSensors();
+    ssCounter = 0;
+    spin = 0; //reset spin counter
+    digitalWrite(LED_GRN, LOW);
+  }
     
     dataFile.println();
 }
