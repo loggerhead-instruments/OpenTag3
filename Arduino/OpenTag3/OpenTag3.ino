@@ -151,7 +151,7 @@ void setup() {
   // see if the card is present and can be initialized:
   while (!sd.begin(chipSelect, SPI_FULL_SPEED)) {
     Serial.println("fail");
-    digitalWrite(LED_GRN,LOW);
+    digitalWrite(LED_GRN, LOW);
     digitalWrite(LED_RED, HIGH);
     delay(200);
     digitalWrite(LED_RED, LOW);
@@ -469,9 +469,14 @@ void logFileWrite()
    for (uint8_t i = 14; i < 24; i += 1) {
        logFile.print(boot_signature_byte_get(i), HEX);
    }
-   logFile.print("Press:");
-   logFile.println(MS58xx_constant);
    logFile.println();
+   if(MS58xx_constant == 8192.0) {
+    logFile.println("30 Bar");
+   }
+   else{
+    logFile.println("2 Bar");
+   }
+   
    logFile.print(year);  logFile.print("-");
    logFile.print(month); logFile.print("-");
    logFile.print(day); logFile.print("T");
