@@ -40,7 +40,7 @@ SoftWire Wire = SoftWire();
 //
 // DEV SETTINGS
 //
-char codeVer[12] = "2018-04-27";
+char codeVer[12] = "2018-05-18";
 int printDiags = 1;
 
 int recDur = 3600; // 3600 seconds per hour
