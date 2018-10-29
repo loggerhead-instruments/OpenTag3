@@ -78,7 +78,7 @@ byte clockprescaler=0;  //clock prescaler
 //
 byte imuTempBuffer[20];
 int imuSrate = 50; // must be integer for timer
-int sensorSrate = 1; // must divide into imuSrate
+int sensorSrate = 5; // must divide into imuSrate
 int slowRateMultiple = imuSrate / sensorSrate;
 int speriod = 1000 / imuSrate;
 
