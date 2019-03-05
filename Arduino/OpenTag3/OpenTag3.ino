@@ -10,10 +10,10 @@
 // RGB light
 
 
-/*
- *  WDT
- *  check for errors on sensor init
- */
+// 2019-03-05: Sleep uC and power down IMU during sleep interval.
+//             showFail() returns after 10 seconds of blinking
+// Run power: ~12 mA
+// Sleep power: ~0.8 mA
 
 //#include <Wire.h>
 #include <SPI.h>
@@ -21,6 +21,7 @@
 #include <MsTimer2.h> 
 #include <avr/sleep.h>
 #include <avr/power.h>
+#include <avr/wdt.h>
 #include <prescaler.h>
 
 #define SDA_PORT PORTC
@@ -40,7 +41,7 @@ SoftWire Wire = SoftWire();
 //
 // DEV SETTINGS
 //
-char codeVer[12] = "2018-05-18";
+char codeVer[12] = "2019-03-05";
 int printDiags = 1;
 
 int recDur = 3600; // 3600 seconds per hour
@@ -149,14 +150,15 @@ void setup() {
   
   Serial.println("microSD");
   // see if the card is present and can be initialized:
-  while (!sd.begin(chipSelect, SPI_FULL_SPEED)) {
-    Serial.println("fail");
-    digitalWrite(LED_GRN, LOW);
-    digitalWrite(LED_RED, HIGH);
-    delay(200);
-    digitalWrite(LED_RED, LOW);
-    delay(100);
-  }
+  sd.begin(chipSelect, SPI_FULL_SPEED);
+//  while (!sd.begin(chipSelect, SPI_FULL_SPEED)) {
+//    Serial.println("fail");
+//    digitalWrite(LED_GRN, LOW);
+//    digitalWrite(LED_RED, HIGH);
+//    delay(200);
+//    digitalWrite(LED_RED, LOW);
+//    delay(100);
+//  }
   loadScript(); // do this early to set time
   initSensors();
   readRTC();
@@ -182,6 +184,7 @@ void setup() {
   digitalWrite(LED_RED, LOW);
 
   setClockPrescaler(clockprescaler); // set clockprescaler from script file
+  wdtInit();
   //setupWDT(11); // initialize and activate WDT with maximum period (~500 ms)
 }
 
@@ -192,15 +195,18 @@ void loop() {
     checkBurn();
     checkVHF();
     Serial.print(t); Serial.print(" "); Serial.println(startTime);
-    delay(1000);
+
     digitalWrite(LED_GRN, HIGH);
     digitalWrite(LED_RED, HIGH);
-    delay(10);
+    delay(3);
     digitalWrite(LED_GRN, LOW);
     digitalWrite(LED_RED, LOW);
+    enterSleep();
+
     if(t >= startTime){
       endTime = startTime + recDur;
       startTime += recDur + recInt;  // this will be next start time for interval record
+      mpuInit(1);
       fileInit();
       updateTemp();  // get first reading ready
       mode = 1;
@@ -227,6 +233,8 @@ void loop() {
       }
       else{
         mode = 0;
+        mpuInit(0); // MPU to sleep
+      //  wdtInit(); // start wdt
       }
     }
 
@@ -300,6 +308,12 @@ void initSensors(){
 
   // flash LED with current hour
   readRTC();
+  Serial.print(year); Serial.print("-");
+  Serial.print(month); Serial.print("-");
+  Serial.print(day); Serial.print(" ");
+  Serial.print(hour); Serial.print(":");
+  Serial.print(minute); Serial.print(":");
+  Serial.println(second);
   digitalWrite(LED_RED, HIGH);
   delay(1000);
   for(int i=0; i<hour; i++){
@@ -311,12 +325,16 @@ void initSensors(){
   delay(400);
   digitalWrite(LED_RED, LOW);
   readRTC();
+  Serial.print(hour); Serial.print(":");
+  Serial.print(minute); Serial.print(":");
+  Serial.println(second);
   if(second==oldSecond){
     showFail(100); // clock not ticking
   }
 
   // Pressure/Temperature
   if (pressInit()==0){
+    Serial.println("Pressure fail");
     showFail(200); // pressure sensor fail
   }
   Serial.println("P D T");
@@ -342,7 +360,10 @@ void initSensors(){
     Serial.println(temperature);
   }
 
-  if (islInit()==0) showFail(200);
+  if (islInit()==0) {
+    Serial.println("RGB fail");
+    showFail(200);
+  }
   
   Serial.println("RGB");
   for (int x=0; x<8; x++){
@@ -356,6 +377,7 @@ void initSensors(){
   Serial.print("MPU");
   int eCode = mpuInit(1);
   if(eCode!=0) {
+    Serial.print("MPU fail ");
     Serial.println(eCode);
     showFail(300);
   }
@@ -382,7 +404,9 @@ void initSensors(){
 
 void showFail(int blinkInterval){
   digitalWrite(LED_GRN, LOW);
-  while(1){
+  int count = 5000 / blinkInterval;
+  if(count < 100) count = 100;
+  for(int n=0; n<count; n++){
     digitalWrite(LED_RED, HIGH);
     delay(blinkInterval);
     digitalWrite(LED_RED, LOW);
@@ -610,5 +634,46 @@ void camPowOff(){
 
 void camPowOn(){
   digitalWrite(CAM_EN, HIGH);
+}
+
+
+ISR(WDT_vect)
+{
+    // do nothing
+}
+
+
+void enterSleep(void)
+{
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);   /* EDIT: could also use SLEEP_MODE_PWR_DOWN for lowest power consumption. */
+  sleep_enable();
+  
+  /* Now enter sleep mode. */
+  sleep_mode();
+  
+  /* The program will continue from here after the WDT timeout*/
+  sleep_disable(); /* First thing to do is disable sleep. */
+  
+  /* Re-enable the peripherals. */
+  power_all_enable();
+}
+
+void wdtInit(){
+    /*** Setup the WDT ***/
+  
+  /* Clear the reset flag. */
+  MCUSR &= ~(1<<WDRF);
+  
+  /* In order to change WDE or the prescaler, we need to
+   * set WDCE (This will allow updates for 4 clock cycles).
+   */
+  WDTCSR |= (1<<WDCE) | (1<<WDE);
+
+  /* set new watchdog timeout prescaler value */
+  //WDTCSR = 1<<WDP0 | 1<<WDP3; /* 8.0 seconds */
+  WDTCSR = (0<<WDP3 )|(1<<WDP2 )|(1<<WDP1)|(0<<WDP0);  // 1 s
+  
+  /* Enable the WD interrupt (note no reset). */
+  WDTCSR |= _BV(WDIE);
 }
 
