@@ -120,7 +120,7 @@ volatile byte day = 1;
 volatile byte month = 1;
 volatile byte year = 17;
 
-unsigned long t, startTime, endTime, burnTime;
+unsigned long t, startTime, endTime, burnTime, startUnixTime;
 int burnFlag = 0;
 long burnSeconds;
 
@@ -169,6 +169,8 @@ void setup() {
   Serial.print(minute);Serial.print(":");
   Serial.println(second);
 
+  startUnixTime = t;
+
  logFileWrite();
   
   if(burnFlag==2){
@@ -196,9 +198,11 @@ void loop() {
     checkVHF();
     Serial.print(t); Serial.print(" "); Serial.println(startTime);
 
-    digitalWrite(LED_GRN, HIGH);
-    digitalWrite(LED_RED, HIGH);
-    delay(3);
+    if(LED_EN){
+      digitalWrite(LED_GRN, HIGH);
+      digitalWrite(LED_RED, HIGH);
+      delay(3);
+    }
     digitalWrite(LED_GRN, LOW);
     digitalWrite(LED_RED, LOW);
     enterSleep();
@@ -224,7 +228,7 @@ void loop() {
     if(t>=endTime){
       stopTimer();
       dataFile.close(); // close file
-      LED_EN = 0; // disable green LED flashing after first file
+      if(t - startUnixTime > 300) LED_EN = 0; // disable green LED flashing after 300 s
       
       if(recInt==0){  // no interval between files
         endTime += recDur;  // update end time
