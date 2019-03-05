@@ -228,7 +228,7 @@ void loop() {
     if(t>=endTime){
       stopTimer();
       dataFile.close(); // close file
-      if(t - startUnixTime > 300) LED_EN = 0; // disable green LED flashing after 300 s
+      if(t - startUnixTime > 3600) LED_EN = 0; // disable green LED flashing after 3600 s
       
       if(recInt==0){  // no interval between files
         endTime += recDur;  // update end time
