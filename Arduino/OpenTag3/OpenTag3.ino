@@ -41,7 +41,7 @@ SoftWire Wire = SoftWire();
 //
 // DEV SETTINGS
 //
-char codeVer[12] = "2019-03-05";
+char codeVer[12] = "2019-08-19";
 int printDiags = 1;
 
 int recDur = 3600; // 3600 seconds per hour
@@ -160,6 +160,11 @@ void setup() {
 //    delay(100);
 //  }
   loadScript(); // do this early to set time
+  
+  // recalculate sample rates in case changed from script
+  slowRateMultiple = imuSrate / sensorSrate;
+  speriod = 1000 / imuSrate;
+  
   initSensors();
   readRTC();
   Serial.print(year); Serial.print("-");
@@ -680,4 +685,3 @@ void wdtInit(){
   /* Enable the WD interrupt (note no reset). */
   WDTCSR |= _BV(WDIE);
 }
-
