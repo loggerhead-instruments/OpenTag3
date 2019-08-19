@@ -65,7 +65,15 @@ int ProcCmd(char *pCmd)
            burnFlag = 2;
            break;
       }
-         
+
+
+      case ('C' + ('P'<<8)):
+      {
+         sscanf(&pCmd[3],"%d",&lv1);
+         clockprescaler=lv1;
+         break; 
+      }
+                
       case ('S' + ('T'<<8)):
       {
         //start time
