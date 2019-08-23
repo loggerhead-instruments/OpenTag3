@@ -9,7 +9,7 @@
 // acclerometer/magnetometer
 // RGB light
 
-
+// 2019-08-23: If no pressure sensor detected, don't sample it.
 // 2019-03-05: Sleep uC and power down IMU during sleep interval.
 //             showFail() returns after 10 seconds of blinking
 // Run power: ~12 mA
@@ -78,8 +78,8 @@ byte clockprescaler=0;  //clock prescaler
 // SENSORS
 //
 byte imuTempBuffer[20];
-int imuSrate = 50; // must be integer for timer
-int sensorSrate = 5; // must divide into imuSrate
+int imuSrate = 100; // must be integer for timer
+int sensorSrate = 1; // must divide into imuSrate
 int slowRateMultiple = imuSrate / sensorSrate;
 int speriod = 1000 / imuSrate;
 
