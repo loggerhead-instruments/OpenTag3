@@ -9,7 +9,7 @@
 // acclerometer/magnetometer
 // RGB light
 
-
+// pressure disabled
 /*
  *  WDT
  *  check for errors on sensor init
@@ -40,7 +40,7 @@ SoftWire Wire = SoftWire();
 //
 // DEV SETTINGS
 //
-char codeVer[12] = "2018-10-29";
+char codeVer[12] = "2019-08-23";
 int printDiags = 1;
 
 int recDur = 3600; // 3600 seconds per hour
@@ -158,6 +158,11 @@ void setup() {
     delay(100);
   }
   loadScript(); // do this early to set time
+
+  // recalculate sample rates in case changed from script
+  slowRateMultiple = imuSrate / sensorSrate;
+  speriod = 1000 / imuSrate;
+  
   initSensors();
   readRTC();
   Serial.print(year); Serial.print("-");
@@ -611,4 +616,3 @@ void camPowOff(){
 void camPowOn(){
   digitalWrite(CAM_EN, HIGH);
 }
-
