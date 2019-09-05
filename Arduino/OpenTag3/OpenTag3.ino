@@ -41,7 +41,7 @@ SoftWire Wire = SoftWire();
 //
 // DEV SETTINGS
 //
-char codeVer[12] = "2019-08-19";
+char codeVer[12] = "2019-09-05";
 int printDiags = 1;
 
 int recDur = 3600; // 3600 seconds per hour
@@ -49,6 +49,7 @@ int recInt = 0;
 int LED_EN = 1; //enable green LEDs flash 1x per pressure read. Can be disabled from script.
 
 boolean HALL_EN = 0; //flash red LED for Hall sensor
+boolean ADC0_EN = 1;
 
 #define pressAddress 0x76
 float MS58xx_constant = 8192.0; // for 30 bar sensor
@@ -78,7 +79,7 @@ byte clockprescaler=0;  //clock prescaler
 // SENSORS
 //
 byte imuTempBuffer[20];
-int imuSrate = 100; // must be integer for timer
+int imuSrate = 50; // must be integer for timer
 int sensorSrate = 1; // must divide into imuSrate
 int slowRateMultiple = imuSrate / sensorSrate;
 int speriod = 1000 / imuSrate;
@@ -107,6 +108,7 @@ int accel_scale = 16;
 
 // impeller spin counter
 volatile int spin;
+volatile int adc0Val;
 
 // System Modes and Status
 int mode = 0; //standby = 0; running = 1
@@ -134,6 +136,7 @@ void setup() {
   pinMode(HALL, INPUT);
   pinMode(CAM_TRIG, OUTPUT);
   pinMode(CAM_EN, OUTPUT);
+  pinMode(A0, INPUT);
   
   digitalWrite(BURN,LOW);
   digitalWrite(LED_RED,LOW);
@@ -490,6 +493,10 @@ void fileWriteSlowSensors(){
   dataFile.print(','); dataFile.print(temperature);
   dataFile.print(','); dataFile.print(spin);
   dataFile.print(','); dataFile.print(voltage);
+  if(ADC0_EN == 1) {
+    dataFile.print(',');
+    dataFile.print(adc0Val);
+  }
 }
 
 void logFileWrite()
@@ -544,7 +551,9 @@ void fileInit()
     delay(100);
    }
    digitalWrite(LED_RED, LOW);
-   dataFile.println("accelX,accelY,accelZ,magX,magY,magZ,gyroX,gyroY,gyroZ,date,red,green,blue,mBar,depth,temperature,spin,V");
+   dataFile.print("accelX,accelY,accelZ,magX,magY,magZ,gyroX,gyroY,gyroZ,date,red,green,blue,mBar,depth,temperature,spin,V");
+   if(ADC0_EN == 1) dataFile.print(",O2");
+   dataFile.println();
    SdFile::dateTimeCallback(file_date_time);
    Serial.println(filename);
 }
@@ -578,6 +587,7 @@ void sampleSensors(void){
     checkBurn();
     calcPressTemp(); // MS58xx pressure and temperature
     readVoltage();
+    adc0Val = analogRead(A0);
     fileWriteSlowSensors();
     ssCounter = 0;
     spin = 0; //reset spin counter
