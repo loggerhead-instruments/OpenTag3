@@ -79,7 +79,7 @@ byte clockprescaler=0;  //clock prescaler
 // SENSORS
 //
 byte imuTempBuffer[20];
-int imuSrate = 50; // must be integer for timer
+int imuSrate = 100; // must be integer for timer
 int sensorSrate = 1; // must divide into imuSrate
 int slowRateMultiple = imuSrate / sensorSrate;
 int speriod = 1000 / imuSrate;
@@ -108,7 +108,7 @@ int accel_scale = 16;
 
 // impeller spin counter
 volatile int spin;
-volatile int adc0Val;
+volatile float adc0Val;
 
 // System Modes and Status
 int mode = 0; //standby = 0; running = 1
@@ -587,7 +587,7 @@ void sampleSensors(void){
     checkBurn();
     calcPressTemp(); // MS58xx pressure and temperature
     readVoltage();
-    adc0Val = analogRead(A0);
+    adc0Val = readADC0(); // read ADC0 with averaging
     fileWriteSlowSensors();
     ssCounter = 0;
     spin = 0; //reset spin counter
@@ -624,6 +624,14 @@ void checkVHF(){
 
 void readVoltage(){
   voltage = analogRead(BAT_VOLTAGE) * 0.0042;
+}
+
+float readADC0(){
+  uint16_t sumADC0 = 0;
+  for(int i=0; i<10; i++){
+    sumADC0 += analogRead(A0);
+  }
+  return (float) sumADC0 / 10.0;
 }
 
 void startInterruptTimer(int speriod, byte clockprescaler){
