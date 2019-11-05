@@ -1,4 +1,4 @@
-// Copyright Loggerhead Instruments, 2017, 2018
+// Copyright Loggerhead Instruments, 2017-2019
 // David Mann
 
 // OpenTag3 is an underwater motion datalogger
@@ -41,15 +41,16 @@ SoftWire Wire = SoftWire();
 //
 // DEV SETTINGS
 //
-char codeVer[12] = "2019-09-05";
+char codeVer[12] = "2019-11-05";
 int printDiags = 1;
 
 int recDur = 3600; // 3600 seconds per hour
 int recInt = 0;
 int LED_EN = 1; //enable green LEDs flash 1x per pressure read. Can be disabled from script.
 
-boolean HALL_EN = 0; //flash red LED for Hall sensor
-boolean ADC0_EN = 1;
+boolean HALL_EN = 0; 
+boolean HALL_LED_EN = 0; //flash red LED for Hall sensor
+boolean ADC0_EN = 0;
 
 #define pressAddress 0x76
 float MS58xx_constant = 8192.0; // for 30 bar sensor
@@ -296,7 +297,7 @@ void loop() {
 boolean ledState;
 void spinCount(){
   ledState = !ledState;
-  if(HALL_EN) digitalWrite(LED_RED, ledState);
+  if(HALL_LED_EN) digitalWrite(LED_RED, ledState);
   spin++;
 }
 
@@ -491,8 +492,10 @@ void fileWriteSlowSensors(){
   dataFile.print(','); dataFile.print(pressure_mbar);
   dataFile.print(','); dataFile.print(depth);
   dataFile.print(','); dataFile.print(temperature);
-  dataFile.print(','); dataFile.print(spin);
   dataFile.print(','); dataFile.print(voltage);
+  if(HALL_EN){
+      dataFile.print(','); dataFile.print(spin);
+  }
   if(ADC0_EN == 1) {
     dataFile.print(',');
     dataFile.print(adc0Val);
@@ -551,7 +554,8 @@ void fileInit()
     delay(100);
    }
    digitalWrite(LED_RED, LOW);
-   dataFile.print("accelX,accelY,accelZ,magX,magY,magZ,gyroX,gyroY,gyroZ,date,red,green,blue,mBar,depth,temperature,spin,V");
+   dataFile.print("accelX,accelY,accelZ,magX,magY,magZ,gyroX,gyroY,gyroZ,date,red,green,blue,mBar,depth,temperature,V");
+   if(HALL_EN) dataFile.print(",spin");
    if(ADC0_EN == 1) dataFile.print(",O2");
    dataFile.println();
    SdFile::dateTimeCallback(file_date_time);

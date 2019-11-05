@@ -123,10 +123,17 @@ int ProcCmd(char *pCmd)
       break;
     }
 
-   // enable Hall LED
+   // enable Hall
     case ('H' + ('E'<<8)):
     {
       HALL_EN = 1;
+      break;
+    }
+    
+   // enable Hall LED
+    case ('H' + ('L'<<8)):
+    {
+      HALL_LED_EN = 1;
       break;
     }
   } 
