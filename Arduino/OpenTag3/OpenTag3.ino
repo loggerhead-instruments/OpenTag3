@@ -41,14 +41,14 @@ SoftWire Wire = SoftWire();
 //
 // DEV SETTINGS
 //
-char codeVer[12] = "2020-04-27";
+char codeVer[12] = "2020-05-19";
 int printDiags = 1;
 
-int recDur = 3600; // 3600 seconds per hour
+int recDur = 60; // 60 seconds per hour
 int recInt = 0;
 int LED_EN = 1; //enable green LEDs flash 1x per pressure read. Can be disabled from script.
 
-boolean HALL_EN = 1; 
+boolean HALL_EN = 0; 
 boolean HALL_LED_EN = 0; //flash red LED for Hall sensor
 boolean ADC0_EN = 0;
 
@@ -80,7 +80,7 @@ byte clockprescaler=0;  //clock prescaler
 // SENSORS
 //
 byte imuTempBuffer[20];
-int imuSrate = 100; // must be integer for timer
+int imuSrate = 1000; // must be integer for timer
 int sensorSrate = 1; // must divide into imuSrate
 int slowRateMultiple = imuSrate / sensorSrate;
 int speriod = 1000 / imuSrate;
@@ -593,8 +593,8 @@ void sampleSensors(void){
     if(LED_EN) digitalWrite(LED_GRN, HIGH);
     islRead(); // RGB in between to give temperature time to convert
     readRTC();
-    checkVHF();
-    checkBurn();
+   // checkVHF();
+  //  checkBurn();
     calcPressTemp(); // MS58xx pressure and temperature
     readVoltage();
     if(ADC0_EN) adc0Val = readADC0(); // read ADC0 with averaging
