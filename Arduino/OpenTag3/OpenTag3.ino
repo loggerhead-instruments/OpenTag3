@@ -41,14 +41,14 @@ SoftWire Wire = SoftWire();
 //
 // DEV SETTINGS
 //
-char codeVer[12] = "2019-11-05";
+char codeVer[12] = "2020-04-27";
 int printDiags = 1;
 
 int recDur = 3600; // 3600 seconds per hour
 int recInt = 0;
 int LED_EN = 1; //enable green LEDs flash 1x per pressure read. Can be disabled from script.
 
-boolean HALL_EN = 0; 
+boolean HALL_EN = 1; 
 boolean HALL_LED_EN = 0; //flash red LED for Hall sensor
 boolean ADC0_EN = 0;
 
@@ -137,7 +137,8 @@ void setup() {
   pinMode(HALL, INPUT);
   pinMode(CAM_TRIG, OUTPUT);
   pinMode(CAM_EN, OUTPUT);
-  pinMode(A0, INPUT);
+  if(ADC0_EN) pinMode(A0, INPUT);
+  pinMode(BAT_VOLTAGE, INPUT);
   
   digitalWrite(BURN,LOW);
   digitalWrite(LED_RED,LOW);
@@ -267,29 +268,29 @@ void loop() {
       }
     }
 
-    // Check if voltage is low
-    if(voltage < 3.3){
-      readVoltage(); // check again to be sure
-      if(voltage < 3.3){
-        camStop();
-        stopTimer();
-        dataFile.close();
-        // go into low power mode
-        mpuInit(0); // sleep IMU
-        islSleep(); // sleep light sensor
-        setClockPrescaler(3); // run at 1 MHz
-        delay(1000);
-        camPowOff();
-        digitalWrite(VHFPOW, HIGH); // turn on VHF
-        digitalWrite(BURN, HIGH);   // burn
-        while(1){
-          digitalWrite(LED_RED, HIGH);
-          delay(10);
-          digitalWrite(LED_RED, LOW);
-          delay(2000);
-        }
-      }
-    }
+//    // Check if voltage is low
+//    if(voltage < 3.3){
+//      readVoltage(); // check again to be sure
+//      if(voltage < 3.3){
+//        camStop();
+//        stopTimer();
+//        dataFile.close();
+//        // go into low power mode
+//        mpuInit(0); // sleep IMU
+//        islSleep(); // sleep light sensor
+//        setClockPrescaler(3); // run at 1 MHz
+//        delay(1000);
+//        camPowOff();
+//        digitalWrite(VHFPOW, HIGH); // turn on VHF
+//        digitalWrite(BURN, HIGH);   // burn
+//        while(1){
+//          digitalWrite(LED_RED, HIGH);
+//          delay(10);
+//          digitalWrite(LED_RED, LOW);
+//          delay(2000);
+//        }
+//      }
+//    }
   } // mode = 1
 }
 
@@ -305,11 +306,14 @@ void initSensors(){
 
   digitalWrite(VHFPOW, HIGH);
   digitalWrite(BURN, HIGH);
+
+  
   
 // Battery Voltage
-  readVoltage();
-  Serial.print(voltage);
-  Serial.println(" V");
+      readVoltage();
+      Serial.print(voltage);
+      Serial.println(" V");
+
   if(voltage < 3.5){
     showFail(50); //battery voltage read fail
   }
@@ -327,6 +331,7 @@ void initSensors(){
   Serial.print(hour); Serial.print(":");
   Serial.print(minute); Serial.print(":");
   Serial.println(second);
+
   digitalWrite(LED_RED, HIGH);
   delay(1000);
   for(int i=0; i<hour; i++){
@@ -343,6 +348,7 @@ void initSensors(){
   Serial.println(second);
   if(second==oldSecond){
     showFail(100); // clock not ticking
+    Serial.println("Clock fail");
   }
 
   // Pressure/Temperature
@@ -591,7 +597,7 @@ void sampleSensors(void){
     checkBurn();
     calcPressTemp(); // MS58xx pressure and temperature
     readVoltage();
-    adc0Val = readADC0(); // read ADC0 with averaging
+    if(ADC0_EN) adc0Val = readADC0(); // read ADC0 with averaging
     fileWriteSlowSensors();
     ssCounter = 0;
     spin = 0; //reset spin counter
