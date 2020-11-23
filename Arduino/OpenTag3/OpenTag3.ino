@@ -48,7 +48,7 @@ int recDur = 3600; // 3600 seconds per hour
 int recInt = 0;
 int LED_EN = 1; //enable green LEDs flash 1x per pressure read. Can be disabled from script.
 
-boolean HALL_EN = 1; 
+boolean HALL_EN = 0; 
 boolean HALL_LED_EN = 0; //flash red LED for Hall sensor
 boolean ADC0_EN = 0;
 
